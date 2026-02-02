@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - College Lab & Classroom Management</title>
+    <title>SPACIO - Create Account</title>
     <style>
-        /* General reset */
         * {
             margin: 0;
             padding: 0;
@@ -13,407 +12,793 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            overflow: hidden;
+        }
+
+        .login-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Right Side - Form */
+        .form-section {
+            flex: 1;
+            background: #ffffff;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
             position: relative;
+            overflow-y: auto;
             overflow-x: hidden;
         }
 
-        /* Animated background elements */
-        body::before {
+        /* ---- background orbs ---- */
+        .form-section .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(70px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .orb.orb1 {
+            width: 300px; height: 300px;
+            background: rgba(22,163,74,0.12);
+            top: -100px; right: -80px;
+            animation: orbFloat1 7s ease-in-out infinite;
+        }
+        .orb.orb2 {
+            width: 220px; height: 220px;
+            background: rgba(21,128,61,0.08);
+            bottom: -60px; left: -70px;
+            animation: orbFloat2 9s ease-in-out infinite;
+        }
+        .orb.orb3 {
+            width: 140px; height: 140px;
+            background: rgba(74,222,128,0.1);
+            top: 45%; left: 15%;
+            animation: orbFloat3 6s ease-in-out infinite;
+        }
+        @keyframes orbFloat1 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            50%     { transform: translate(-30px,25px) scale(1.1); }
+        }
+        @keyframes orbFloat2 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            50%     { transform: translate(25px,-20px) scale(1.08); }
+        }
+        @keyframes orbFloat3 {
+            0%,100% { transform: translate(0,0) scale(1); opacity:0.1; }
+            50%     { transform: translate(15px,15px) scale(1.15); opacity:0.18; }
+        }
+
+        /* ---- tiny floating particles ---- */
+        .particle {
+            position: absolute;
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: #16a34a;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .particle.p1 { top:18%; right:12%; animation: particleDrift 5s ease-in-out 0s infinite; }
+        .particle.p2 { top:72%; right:8%;  width:4px; height:4px; background:#15803d; animation: particleDrift 7s ease-in-out 1.5s infinite; }
+        .particle.p3 { top:38%; right:22%; width:3px; height:3px; background:#4ade80; animation: particleDrift 6s ease-in-out 3s infinite; }
+        .particle.p4 { top:85%; right:30%; width:4px; height:4px; background:#16a34a; animation: particleDrift 8s ease-in-out 0.8s infinite; }
+        .particle.p5 { top:10%; right:35%; width:3px; height:3px; background:#4ade80; animation: particleDrift 5.5s ease-in-out 2.2s infinite; }
+        .particle.p6 { top:55%; right:5%;  width:5px; height:5px; background:#15803d; animation: particleDrift 9s ease-in-out 4s infinite; }
+        @keyframes particleDrift {
+            0%   { opacity:0; transform:translateY(0) translateX(0); }
+            20%  { opacity:0.55; }
+            80%  { opacity:0.3; }
+            100% { opacity:0; transform:translateY(-40px) translateX(-12px); }
+        }
+
+        /* ---- everything above the bg ---- */
+        .logo, .form-container { position: relative; z-index: 1; }
+
+        .logo {
+            position: absolute;
+            top: 40px;
+            right: 80px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: logoSlideIn 0.6s cubic-bezier(.22,1,.36,1) 0.15s both;
+        }
+        @keyframes logoSlideIn {
+            from { opacity:0; transform:translateY(-12px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+
+        .logo-icon { width:48px; height:48px; }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .form-container {
+            max-width: 450px;
+            width: 100%;
+        }
+
+        /* ---- staggered entrance ---- */
+        .welcome-header h1 {
+            font-size: 42px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+            animation: formElIn 0.6s cubic-bezier(.22,1,.36,1) 0.25s both;
+        }
+        .welcome-header p {
+            font-size: 16px;
+            color: #9ca3af;
+            margin-bottom: 30px;
+            animation: formElIn 0.6s cubic-bezier(.22,1,.36,1) 0.35s both;
+        }
+        .form-group:nth-child(1) { animation: formElIn 0.6s cubic-bezier(.22,1,.36,1) 0.42s both; }
+        .form-group:nth-child(2) { animation: formElIn 0.6s cubic-bezier(.22,1,.36,1) 0.50s both; }
+        .form-group:nth-child(3) { animation: formElIn 0.6s cubic-bezier(.22,1,.36,1) 0.58s both; }
+        .sign-in-button          { animation: formElIn 0.6s cubic-bezier(.22,1,.36,1) 0.66s both; }
+        .signup-text             { animation: formElIn 0.6s cubic-bezier(.22,1,.36,1) 0.74s both; }
+        @keyframes formElIn {
+            from { opacity:0; transform:translateY(18px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+
+        /* ---- inputs ---- */
+        .form-group { margin-bottom: 20px; }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            transition: color 0.25s ease;
+        }
+        .form-group:focus-within label { color: #15803d; }
+
+        /* animated bottom-line on focus */
+        .input-wrapper::after {
+            content:'';
+            position:absolute;
+            bottom:0; left:50%;
+            transform:translateX(-50%);
+            width:0; height:2px;
+            background: linear-gradient(90deg,#16a34a,#4ade80,#15803d);
+            border-radius:0 0 8px 8px;
+            transition:width 0.4s cubic-bezier(.22,1,.36,1);
+            pointer-events:none;
+            z-index:2;
+        }
+        .form-group:focus-within .input-wrapper::after { width:100%; }
+
+        /* ---- input icons ---- */
+        .input-wrapper { position: relative; }
+        .input-wrapper .input-icon {
+            position:absolute; left:14px; top:50%;
+            transform:translateY(-50%);
+            width:18px; height:18px;
+            color:#9ca3af;
+            transition:color 0.25s;
+            pointer-events:none;
+            z-index:1;
+        }
+        .form-group:focus-within .input-icon { color:#16a34a; }
+
+        .input-wrapper input,
+        .input-wrapper select {
+            width:100%;
+            padding:14px 16px 14px 42px;
+            border:1.5px solid #e5e7eb;
+            border-radius:8px;
+            font-size:15px;
+            transition:all 0.3s ease;
+            outline:none;
+            background:#fafafa;
+            color:#1a1a1a;
+            font-family:inherit;
+        }
+        .input-wrapper input:focus,
+        .input-wrapper select:focus {
+            border-color:#16a34a;
+            background:#fff;
+            box-shadow:0 0 0 3px rgba(22,163,74,0.13), 0 4px 12px rgba(22,163,74,0.08);
+            transform:translateY(-1px);
+        }
+        .input-wrapper input::placeholder { color:#d1d5db; }
+
+        .input-wrapper select {
+            appearance:none;
+            -webkit-appearance:none;
+            cursor:pointer;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%239ca3af'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat:no-repeat;
+            background-position:right 14px center;
+            padding-right:36px;
+        }
+        .input-wrapper select option { color:#1a1a1a; background:#fff; }
+
+        /* ---- section divider ---- */
+        .section-divider {
+            display:flex; align-items:center; gap:12px;
+            margin:8px 0 20px;
+        }
+        .section-divider::before,
+        .section-divider::after {
+            content:''; flex:1; height:1px;
+            background:linear-gradient(90deg, transparent, #e5e7eb);
+        }
+        .section-divider::after {
+            background:linear-gradient(270deg, transparent, #e5e7eb);
+        }
+        .section-title {
+            font-size:12px; font-weight:600;
+            color:#16a34a; text-transform:uppercase;
+            letter-spacing:0.8px; white-space:nowrap;
+        }
+
+        /* ---- conditional info section ---- */
+        .hidden { display: none; }
+        #student-info-section {
+            animation: sectionSlideIn 0.4s cubic-bezier(.22,1,.36,1) both;
+        }
+        @keyframes sectionSlideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ---- sign-in button with shimmer ---- */
+        .sign-in-button {
+            width:100%; padding:14px;
+            background: linear-gradient(135deg,#16a34a 0%,#15803d 100%);
+            color:white; border:none; border-radius:8px;
+            font-size:16px; font-weight:600; cursor:pointer;
+            position:relative; overflow:hidden;
+            transition: all 0.3s ease;
+            margin-bottom:20px;
+            box-shadow: 0 4px 14px rgba(22,163,74,0.3);
+        }
+        /* shimmer sweep */
+        .sign-in-button::before {
+            content:'';
+            position:absolute;
+            top:0; left:-100%;
+            width:60%; height:100%;
+            background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%);
+            animation: shimmerSweep 3s ease-in-out 1.8s infinite;
+            pointer-events:none;
+        }
+        @keyframes shimmerSweep {
+            0%   { left:-100%; }
+            100% { left:140%; }
+        }
+        .sign-in-button:hover {
+            transform:translateY(-2px);
+            box-shadow: 0 6px 24px rgba(22,163,74,0.45);
+        }
+        .sign-in-button:active { transform:translateY(0); box-shadow: 0 2px 8px rgba(22,163,74,0.3); }
+
+        /* ---- signup text ---- */
+        .signup-text {
+            text-align:center;
+            font-size:14px; color:#6b7280;
+            margin-top: 8px;
+        }
+        .signup-text a {
+            color:#15803d; text-decoration:none;
+            font-weight:600;
+            position:relative;
+            transition:color 0.25s;
+        }
+        .signup-text a::after {
+            content:'';
+            position:absolute; bottom:-2px; left:0;
+            width:0; height:1.5px;
+            background:#15803d;
+            transition:width 0.3s ease;
+        }
+        .signup-text a:hover { color:#166534; }
+        .signup-text a:hover::after { width:100%; }
+
+        /* Left Side - Illustration */
+        .illustration-section {
+            flex: 1;
+            background: linear-gradient(160deg, #15803d 0%, #166534 50%, #14532d 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .illustration-section svg.scene {
+            width: 88%;
+            max-width: 520px;
+            position: relative;
+            z-index: 2;
+            filter: drop-shadow(0 20px 40px rgba(0,0,0,0.2));
+        }
+
+        /* subtle radial glow behind illustration */
+        .illustration-section::before {
             content: '';
             position: absolute;
             width: 500px;
             height: 500px;
-            background: rgba(255, 255, 255, 0.1);
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
             border-radius: 50%;
-            top: -250px;
-            right: -250px;
-            animation: float 6s ease-in-out infinite;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
 
-        body::after {
-            content: '';
+        /* floating decorative dots */
+        .float-dot {
             position: absolute;
-            width: 400px;
-            height: 400px;
-            background: rgba(255, 255, 255, 0.05);
             border-radius: 50%;
-            bottom: -200px;
-            left: -200px;
-            animation: float 8s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-
-        .register-container {
-            width: 100%;
-            max-width: 550px;
-            position: relative;
+            background: rgba(255,255,255,0.12);
             z-index: 1;
         }
+        .float-dot.d1 { width:180px; height:180px; top:-60px; left:-60px; }
+        .float-dot.d2 { width:120px; height:120px; bottom:-40px; right:-40px; }
+        .float-dot.d3 { width:70px;  height:70px;  top:12%;  right:8%; }
+        .float-dot.d4 { width:50px;  height:50px;  bottom:18%; left:10%; }
 
-        .register-box {
-            background: #ffffff;
-            padding: 45px 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            position: relative;
-            backdrop-filter: blur(10px);
-            max-height: 90vh;
-            overflow-y: auto;
+        /* ---- ANIMATIONS ---- */
+
+        /* panels breathe in on load */
+        .panel-sci  { animation: panelIn 0.7s cubic-bezier(.22,1,.36,1) 0.1s both; }
+        .panel-comp { animation: panelIn 0.7s cubic-bezier(.22,1,.36,1) 0.3s both; }
+        .panel-class{ animation: panelIn 0.7s cubic-bezier(.22,1,.36,1) 0.5s both; }
+        @keyframes panelIn {
+            from { opacity:0; transform:translateY(28px); }
+            to   { opacity:1; transform:translateY(0); }
         }
 
-        /* Custom scrollbar */
-        .register-box::-webkit-scrollbar {
-            width: 8px;
+        /* beaker bubbles float up & fade */
+        .bubble { animation: bubbleRise 3s ease-in-out infinite; }
+        .bubble.b2 { animation-delay: 1s; }
+        .bubble.b3 { animation-delay: 2s; }
+        @keyframes bubbleRise {
+            0%   { transform:translateY(0);   opacity:0.32; }
+            60%  { opacity:0.5; }
+            100% { transform:translateY(-18px); opacity:0; }
         }
 
-        .register-box::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
+        /* steam wisps drift up */
+        .steam { animation: steamDrift 2.4s ease-in-out infinite; }
+        .steam.s2 { animation-delay: 1.2s; }
+        @keyframes steamDrift {
+            0%   { transform:translateY(0);   opacity:0.3; }
+            50%  { opacity:0.45; }
+            100% { transform:translateY(-14px); opacity:0; }
         }
 
-        .register-box::-webkit-scrollbar-thumb {
-            background: #10b981;
-            border-radius: 10px;
+        /* erlenmeyer liquid shimmer */
+        .flask-liquid { animation: shimmer 2.8s ease-in-out infinite; }
+        @keyframes shimmer {
+            0%,100% { opacity:0.15; }
+            50%     { opacity:0.28; }
         }
 
-        .register-box::-webkit-scrollbar-thumb:hover {
-            background: #059669;
+        /* test-tube liquids gently pulse */
+        .tube-liquid { animation: tubePulse 2s ease-in-out infinite; }
+        .tube-liquid.t2 { animation-delay:0.7s; }
+        .tube-liquid.t3 { animation-delay:1.4s; }
+        @keyframes tubePulse {
+            0%,100% { opacity:0.15; }
+            50%     { opacity:0.3; }
         }
 
-        /* Logo/Icon Section */
-        .logo-section {
-            text-align: center;
-            margin-bottom: 30px;
+        /* monitor screen lines type-in one by one */
+        .screen-line { opacity:0; animation: typeLine 0.5s ease forwards; }
+        .screen-line.l2 { animation-delay:3.2s; }
+        .screen-line.l3 { animation-delay:3.5s; }
+        .screen-line.l4 { animation-delay:3.8s; }
+        .screen-line.l5 { animation-delay:6.2s; }
+        .screen-line.l6 { animation-delay:6.5s; }
+        .screen-line.l7 { animation-delay:6.8s; }
+        @keyframes typeLine {
+            0%   { opacity:0; stroke-dashoffset:80; }
+            100% { opacity:0.35; stroke-dashoffset:0; }
+        }
+        /* repeat loop for screen lines */
+        .screen-line { animation-iteration-count: infinite; animation-duration: 7s; }
+        .screen-line.l2 { animation-delay:0.3s; }
+        .screen-line.l3 { animation-delay:0.6s; }
+        .screen-line.l4 { animation-delay:0.9s; }
+        .screen-line.l5 { animation-delay:3.2s; }
+        .screen-line.l6 { animation-delay:3.5s; }
+        .screen-line.l7 { animation-delay:3.8s; }
+
+        /* cursor blink on monitor 1 */
+        .cursor { animation: blink 1.1s step-end infinite; }
+        @keyframes blink {
+            0%,100% { opacity:0.7; }
+            50%     { opacity:0; }
         }
 
-        .logo-icon {
-            width: 70px;
-            height: 70px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            border-radius: 18px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        /* chalk lines draw themselves */
+        .chalk { stroke-dasharray:60; stroke-dashoffset:60; animation: chalkDraw 1.2s ease forwards; }
+        .chalk.c2 { animation-delay:0.3s; }
+        .chalk.c3 { animation-delay:0.6s; }
+        @keyframes chalkDraw {
+            to { stroke-dashoffset:0; }
         }
 
-        .logo-icon svg {
-            width: 40px;
-            height: 40px;
-            fill: white;
+        /* floating deco dots pulse in & out */
+        .deco-dot { animation: decoPulse 3s ease-in-out infinite; }
+        .deco-dot.dd2 { animation-delay:1s; }
+        .deco-dot.dd3 { animation-delay:2s; }
+        @keyframes decoPulse {
+            0%,100% { opacity:0.25; transform:scale(1); }
+            50%     { opacity:0.45; transform:scale(1.2); }
         }
 
-        .register-box h2 {
-            color: #2d3748;
-            font-size: 26px;
-            font-weight: 600;
-            margin-bottom: 8px;
+        /* plus signs gentle float */
+        .deco-plus { animation: plusFloat 5s ease-in-out infinite; }
+        .deco-plus.p2 { animation-delay:1.6s; }
+        .deco-plus.p3 { animation-delay:3s; }
+        .deco-plus.p4 { animation-delay:0.8s; }
+        @keyframes plusFloat {
+            0%,100% { transform:translateY(0); opacity:0.22; }
+            50%     { transform:translateY(-6px); opacity:0.35; }
         }
 
-        .register-box .subtitle {
-            color: #718096;
-            font-size: 14px;
-            font-weight: 400;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-            position: relative;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #4a5568;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .input-wrapper {
-            position: relative;
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 18px;
-            height: 18px;
-            opacity: 0.5;
-        }
-
-        .input-group input,
-        .input-group select {
-            width: 100%;
-            padding: 13px 15px 13px 45px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            background-color: #f7fafc;
-        }
-
-        .input-group input:focus,
-        .input-group select:focus {
-            border-color: #10b981;
-            outline: none;
-            background-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-        }
-
-        .input-group input::placeholder {
-            color: #a0aec0;
-        }
-
-        .input-group select {
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0aec0' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 15px center;
-            padding-right: 40px;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .role-fields {
-            animation: fadeIn 0.3s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .register-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            border: none;
-            border-radius: 10px;
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-            margin-top: 10px;
-        }
-
-        .register-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
-        }
-
-        .register-btn:active {
-            transform: translateY(0);
-        }
-
-        .login-link {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #718096;
-        }
-
-        .login-link a {
-            color: #10b981;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .login-link a:hover {
-            color: #059669;
-            text-decoration: underline;
-        }
-
-        .section-divider {
-            margin: 25px 0 20px;
-            padding-top: 20px;
-            border-top: 2px solid #e2e8f0;
-        }
-
-        .section-title {
-            color: #10b981;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 15px;
+        /* floating background dots */
+        .float-dot { animation: floatBg 8s ease-in-out infinite; }
+        .float-dot.d2 { animation-delay:2s; animation-duration:10s; }
+        .float-dot.d3 { animation-delay:1s; animation-duration:6s; }
+        .float-dot.d4 { animation-delay:3s; animation-duration:7s; }
+        @keyframes floatBg {
+            0%,100% { transform:scale(1); opacity:0.12; }
+            50%     { transform:scale(1.15); opacity:0.2; }
         }
 
         /* Responsive Design */
+        @media (max-width: 968px) {
+            .login-container {
+                flex-direction: column;
+            }
+
+            .illustration-section {
+                display: none;
+            }
+
+            .form-section {
+                padding: 60px 40px;
+                justify-content: flex-start;
+                padding-top: 120px;
+            }
+
+            .logo {
+                right: 40px;
+            }
+
+            .welcome-header h1 {
+                font-size: 36px;
+            }
+        }
+
         @media (max-width: 480px) {
-            .register-box {
-                padding: 35px 25px;
+            .form-section {
+                padding: 40px 30px;
+                padding-top: 100px;
             }
 
-            .register-box h2 {
-                font-size: 22px;
+            .logo {
+                right: 30px;
+                top: 30px;
             }
 
-            .logo-icon {
-                width: 60px;
-                height: 60px;
+            .logo-text {
+                font-size: 20px;
             }
 
-            .logo-icon svg {
-                width: 35px;
-                height: 35px;
-            }
-
-            .input-group {
-                margin-bottom: 18px;
+            .welcome-header h1 {
+                font-size: 32px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="register-container">
-        <div class="register-box">
-            <div class="logo-section">
+    <div class="login-container">
+        <!-- Left Side - Illustration -->
+        <div class="illustration-section">
+            <div class="float-dot d1"></div>
+            <div class="float-dot d2"></div>
+            <div class="float-dot d3"></div>
+            <div class="float-dot d4"></div>
+
+            <svg class="scene" viewBox="0 0 540 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+                <!-- ============ SCIENCE LAB PANEL ============ -->
+                <rect class="panel-sci" x="18" y="40" width="158" height="340" rx="20" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.22)" stroke-width="1.8"/>
+                <!-- title -->
+                <text x="97" y="78" text-anchor="middle" fill="white" font-family="system-ui, sans-serif" font-size="14" font-weight="600" opacity="0.95">Science Lab</text>
+                <line x1="72" y1="87" x2="122" y2="87" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.45"/>
+
+                <!-- Beaker -->
+                <rect x="38" y="130" width="40" height="68" rx="5" stroke="white" stroke-width="2.2" fill="none" opacity="0.85"/>
+                <line x1="33" y1="130" x2="43" y2="130" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+                <line x1="73" y1="130" x2="83" y2="130" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+                <!-- liquid -->
+                <rect x="40" y="172" width="36" height="22" rx="2" fill="white" opacity="0.18"/>
+                <!-- bubbles -->
+                <circle class="bubble" cx="48" cy="158" r="3.2" fill="white" opacity="0.3"/>
+                <circle class="bubble b2" cx="60" cy="150" r="2.2" fill="white" opacity="0.22"/>
+                <circle class="bubble b3" cx="66" cy="162" r="1.8" fill="white" opacity="0.28"/>
+                <!-- steam lines -->
+                <path class="steam" d="M52 125 Q55 118 52 112" stroke="white" stroke-width="1.4" fill="none" opacity="0.3" stroke-linecap="round"/>
+                <path class="steam s2" d="M62 123 Q65 116 62 110" stroke="white" stroke-width="1.4" fill="none" opacity="0.22" stroke-linecap="round"/>
+
+                <!-- Microscope -->
+                <ellipse cx="130" cy="198" rx="20" ry="4.5" fill="white" opacity="0.25"/>
+                <line x1="130" y1="198" x2="130" y2="140" stroke="white" stroke-width="3.8" stroke-linecap="round" opacity="0.75"/>
+                <line x1="130" y1="143" x2="113" y2="122" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+                <line x1="130" y1="165" x2="130" y2="188" stroke="white" stroke-width="2.4" stroke-linecap="round" opacity="0.6"/>
+                <rect x="118" y="187" width="24" height="4" rx="2" fill="white" opacity="0.4"/>
+
+                <!-- Test tube rack -->
+                <rect x="38" y="250" width="104" height="10" rx="5" fill="white" opacity="0.22"/>
+                <rect x="50" y="215" width="6" height="44" rx="3" fill="white" opacity="0.28"/>
+                <rect x="64" y="220" width="6" height="39" rx="3" fill="white" opacity="0.22"/>
+                <rect x="78" y="212" width="6" height="47" rx="3" fill="white" opacity="0.32"/>
+                <rect x="92" y="218" width="6" height="41" rx="3" fill="white" opacity="0.24"/>
+                <rect x="106" y="214" width="6" height="45" rx="3" fill="white" opacity="0.28"/>
+                <!-- colored liquid in tubes -->
+                <rect class="tube-liquid" x="51" y="240" width="4" height="14" rx="2" fill="white" opacity="0.15"/>
+                <rect class="tube-liquid t2" x="79" y="242" width="4" height="12" rx="2" fill="white" opacity="0.18"/>
+                <rect class="tube-liquid t3" x="107" y="238" width="4" height="16" rx="2" fill="white" opacity="0.15"/>
+
+                <!-- Erlenmeyer flask -->
+                <path d="M60 300 L48 345 Q48 352 55 352 L85 352 Q92 352 92 345 L80 300 Z" stroke="white" stroke-width="2" fill="none" opacity="0.7"/>
+                <line x1="58" y1="300" x2="82" y2="300" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+                <rect class="flask-liquid" x="50" y="338" width="40" height="8" rx="2" fill="white" opacity="0.15"/>
+
+
+                <!-- ============ COMPUTER LAB PANEL ============ -->
+                <rect class="panel-comp" x="192" y="40" width="156" height="340" rx="20" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.22)" stroke-width="1.8"/>
+                <!-- title -->
+                <text x="270" y="78" text-anchor="middle" fill="white" font-family="system-ui, sans-serif" font-size="14" font-weight="600" opacity="0.95">Computer Lab</text>
+                <line x1="238" y1="87" x2="302" y2="87" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.45"/>
+
+                <!-- Monitor 1 -->
+                <rect x="215" y="118" width="70" height="48" rx="5" stroke="white" stroke-width="2.2" fill="rgba(255,255,255,0.05)" opacity="0.8"/>
+                <!-- screen content lines with type-in -->
+                <line class="screen-line" x1="225" y1="136" x2="275" y2="136" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="60" stroke-dashoffset="60"/>
+                <line class="screen-line l2" x1="225" y1="143" x2="260" y2="143" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+                <line class="screen-line l3" x1="225" y1="150" x2="268" y2="150" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="58" stroke-dashoffset="58"/>
+                <!-- blinking cursor -->
+                <rect class="cursor" x="270" y="148" width="3" height="10" rx="1" fill="white" opacity="0.7"/>
+                <!-- stand -->
+                <rect x="246" y="166" width="8" height="14" rx="2" fill="white" opacity="0.3"/>
+                <!-- base -->
+                <rect x="234" y="180" width="32" height="5" rx="2.5" fill="white" opacity="0.28"/>
+
+                <!-- Keyboard -->
+                <rect x="215" y="200" width="70" height="28" rx="4" stroke="white" stroke-width="1.8" fill="rgba(255,255,255,0.04)" opacity="0.6"/>
+                <!-- key rows -->
+                <line x1="222" y1="210" x2="278" y2="210" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.25"/>
+                <line x1="222" y1="216" x2="278" y2="216" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.2"/>
+                <line x1="230" y1="222" x2="270" y2="222" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.18"/>
+
+                <!-- Mouse -->
+                <rect x="292" y="202" width="22" height="32" rx="11" stroke="white" stroke-width="1.8" fill="rgba(255,255,255,0.04)" opacity="0.6"/>
+                <line x1="303" y1="202" x2="303" y2="215" stroke="white" stroke-width="1" opacity="0.3"/>
+
+                <!-- Monitor 2 -->
+                <rect x="218" y="262" width="64" height="42" rx="4" stroke="white" stroke-width="1.8" fill="rgba(255,255,255,0.04)" opacity="0.55"/>
+                <line class="screen-line l4" x1="227" y1="278" x2="272" y2="278" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="55" stroke-dashoffset="55"/>
+                <line class="screen-line l5" x1="227" y1="284" x2="258" y2="284" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="44" stroke-dashoffset="44"/>
+                <line class="screen-line l6" x1="227" y1="290" x2="265" y2="290" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="52" stroke-dashoffset="52"/>
+                <!-- stand -->
+                <rect x="246" y="304" width="6" height="10" rx="2" fill="white" opacity="0.25"/>
+                <rect x="237" y="314" width="24" height="4" rx="2" fill="white" opacity="0.22"/>
+
+                <!-- USB / cable detail -->
+                <path d="M250 330 Q250 340 240 345 Q230 348 235 355" stroke="white" stroke-width="1.4" fill="none" opacity="0.25" stroke-linecap="round"/>
+
+
+                <!-- ============ CLASSROOM PANEL ============ -->
+                <rect class="panel-class" x="364" y="40" width="158" height="340" rx="20" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.22)" stroke-width="1.8"/>
+                <!-- title -->
+                <text x="443" y="78" text-anchor="middle" fill="white" font-family="system-ui, sans-serif" font-size="14" font-weight="600" opacity="0.95">Classroom</text>
+                <line x1="418" y1="87" x2="468" y2="87" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.45"/>
+
+                <!-- Chalkboard -->
+                <rect x="385" y="108" width="116" height="78" rx="6" fill="rgba(255,255,255,0.06)" stroke="white" stroke-width="2.2" opacity="0.7"/>
+                <!-- chalk writing with draw-on animation -->
+                <line class="chalk" x1="398" y1="135" x2="450" y2="135" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+                <line class="chalk c2" x1="398" y1="148" x2="435" y2="148" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+                <line class="chalk c3" x1="398" y1="161" x2="455" y2="161" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.32"/>
+                <!-- chalk tray -->
+                <rect x="385" y="181" width="116" height="5" rx="2.5" fill="white" opacity="0.22"/>
+                <!-- chalk stick -->
+                <rect x="478" y="179" width="16" height="3.5" rx="1.8" fill="white" opacity="0.4"/>
+
+                <!-- Teacher desk -->
+                <rect x="390" y="230" width="106" height="7" rx="3.5" fill="white" opacity="0.3"/>
+                <rect x="396" y="237" width="4" height="22" rx="2" fill="white" opacity="0.2"/>
+                <rect x="488" y="237" width="4" height="22" rx="2" fill="white" opacity="0.2"/>
+                <!-- Book stack on desk -->
+                <rect x="420" y="220" width="38" height="7" rx="2" fill="white" opacity="0.28"/>
+                <rect x="423" y="214" width="32" height="7" rx="2" fill="white" opacity="0.22"/>
+                <rect x="426" y="208" width="26" height="7" rx="2" fill="white" opacity="0.18"/>
+
+                <!-- Student desks row -->
+                <rect x="390" y="295" width="50" height="5" rx="2.5" fill="white" opacity="0.24"/>
+                <rect x="393" y="300" width="3" height="16" rx="1.5" fill="white" opacity="0.18"/>
+                <rect x="434" y="300" width="3" height="16" rx="1.5" fill="white" opacity="0.18"/>
+
+                <rect x="450" y="295" width="50" height="5" rx="2.5" fill="white" opacity="0.24"/>
+                <rect x="453" y="300" width="3" height="16" rx="1.5" fill="white" opacity="0.18"/>
+                <rect x="494" y="300" width="3" height="16" rx="1.5" fill="white" opacity="0.18"/>
+
+                <!-- Notebook on student desk -->
+                <rect x="396" y="288" width="22" height="7" rx="1.5" fill="white" opacity="0.2"/>
+                <rect x="456" y="288" width="18" height="7" rx="1.5" fill="white" opacity="0.18"/>
+
+                <!-- ============ FLOATING DECO ============ -->
+                <text class="deco-plus" x="8" y="28" fill="white" font-size="20" opacity="0.22" font-weight="300">+</text>
+                <text class="deco-plus p2" x="510" y="22" fill="white" font-size="16" opacity="0.18" font-weight="300">+</text>
+                <text class="deco-plus p3" x="4" y="400" fill="white" font-size="15" opacity="0.16" font-weight="300">+</text>
+                <text class="deco-plus p4" x="520" y="410" fill="white" font-size="18" opacity="0.2" font-weight="300">+</text>
+                <circle cx="530" cy="210" r="10" stroke="white" stroke-width="1.3" fill="none" opacity="0.18"/>
+                <circle cx="10" cy="220" r="7" stroke="white" stroke-width="1.2" fill="none" opacity="0.16"/>
+                <circle class="deco-dot" cx="500" cy="30" r="3" fill="white" opacity="0.25"/>
+                <circle class="deco-dot dd2" cx="512" cy="30" r="3" fill="white" opacity="0.2"/>
+                <circle class="deco-dot dd3" cx="524" cy="30" r="3" fill="white" opacity="0.15"/>
+            </svg>
+        </div>
+
+        <!-- Right Side - Form -->
+        <div class="form-section">
+            <!-- ambient background -->
+            <div class="orb orb1"></div>
+            <div class="orb orb2"></div>
+            <div class="orb orb3"></div>
+            <div class="particle p1"></div>
+            <div class="particle p2"></div>
+            <div class="particle p3"></div>
+            <div class="particle p4"></div>
+            <div class="particle p5"></div>
+            <div class="particle p6"></div>
+
+            <div class="logo">
                 <div class="logo-icon">
-                    <!-- User add icon -->
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="bg" x1="0" y1="0" x2="48" y2="48">
+                                <stop offset="0%" stop-color="#16a34a"/>
+                                <stop offset="100%" stop-color="#15803d"/>
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Rounded background -->
+                        <rect width="48" height="48" rx="12" fill="url(#bg)"/>
+
+                        <!-- College building outline -->
+                        <path d="M8 38 L8 18 L24 10 L40 18 L40 38" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <!-- Base line -->
+                        <line x1="6" y1="38" x2="42" y2="38" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+
+                        <!-- Left window: Beaker (Laboratory) -->
+                        <rect x="11" y="22" width="9" height="11" rx="1.5" stroke="white" stroke-width="1.6" fill="none"/>
+                        <!-- Beaker liquid fill -->
+                        <rect x="12.8" y="29" width="5.4" height="2.8" rx="0.8" fill="white" opacity="0.5"/>
+                        <!-- Beaker bubbles -->
+                        <circle cx="14.5" cy="27" r="0.8" fill="white" opacity="0.7"/>
+                        <circle cx="16.8" cy="26" r="0.6" fill="white" opacity="0.5"/>
+
+                        <!-- Right window: Chalkboard (Classroom) -->
+                        <rect x="28" y="22" width="9" height="11" rx="1.5" stroke="white" stroke-width="1.6" fill="none"/>
+                        <!-- Chalk lines representing writing -->
+                        <line x1="30" y1="26" x2="35" y2="26" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
+                        <line x1="30" y1="28.5" x2="33.5" y2="28.5" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+                        <line x1="30" y1="31" x2="34.5" y2="31" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+
+                        <!-- Roof flag / pennant -->
+                        <line x1="24" y1="10" x2="24" y2="5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                        <path d="M24 5 L29 6.5 L24 8" fill="white" opacity="0.85"/>
                     </svg>
                 </div>
-                <h2>Create Account</h2>
-                <p class="subtitle">Join the College Lab & Classroom Management</p>
+                <div class="logo-text">SPACIO</div>
             </div>
 
-            <form action="register_process.php" method="POST" id="registerForm">
-                <!-- Basic Information -->
-                <div class="input-group">
-                    <label for="fullname">Full Name</label>
-                    <div class="input-wrapper">
-                        <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                        </svg>
-                        <input type="text" id="fullname" name="fullname" placeholder="Enter your full name" required>
-                    </div>
+            <div class="form-container">
+                <div class="welcome-header">
+                    <h1>Create account</h1>
+                    <p>Fill in your details to get started</p>
                 </div>
 
-                <div class="input-group">
-                    <label for="username">Username</label>
-                    <div class="input-wrapper">
-                        <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                        </svg>
-                        <input type="text" id="username" name="username" placeholder="Choose a username" required>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label for="role">Role</label>
-                    <div class="input-wrapper">
-                        <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                        </svg>
-                        <select id="role" name="role" required>
-                            <option value="">Select your role</option>
-                            <option value="student">Student</option>
-                            <option value="teacher">Teacher</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Student Fields -->
-                <div id="studentFields" class="hidden role-fields">
-                    <div class="section-divider">
-                        <div class="section-title">Student Information</div>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="course">Course</label>
+                <form action="register_process.php" method="POST" id="registerForm">
+                    <!-- Name Fields -->
+                    <div class="form-group">
+                        <label for="firstname">First Name</label>
                         <div class="input-wrapper">
                             <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                             </svg>
-                            <input type="text" id="course" name="course" placeholder="e.g., BS Computer Science">
+                            <input type="text" id="firstname" name="firstname" placeholder="Enter your first name" required>
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <label for="student_campus">Campus</label>
+                    <div class="form-group">
+                        <label for="middlename">Middle Name</label>
                         <div class="input-wrapper">
                             <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                             </svg>
-                            <select id="student_campus" name="student_campus">
-                                <option value="">Select campus</option>
-                                <option value="CLI">CLI</option>
-                                <option value="CHS">CHS</option>
+                            <input type="text" id="middlename" name="middlename" placeholder="Enter your middle name">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lastname">Last Name</label>
+                        <div class="input-wrapper">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                            <input type="text" id="lastname" name="lastname" placeholder="Enter your last name" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role">Role</label>
+                        <div class="input-wrapper">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                            </svg>
+                            <select id="role" name="role" required onchange="handleRoleChange()">
+                                <option value="">Select your role</option>
+                                <option value="student">Student</option>
+                                <option value="teacher">Teacher</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="input-group">
+                    <!-- Student Information Section -->
+                    <div id="student-info-section" class="hidden">
+                        <div class="section-divider"><div class="section-title">Student Information</div></div>
+
+                    <div class="form-group">
                         <label for="student_id">ID Number</label>
                         <div class="input-wrapper">
                             <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
                             </svg>
-                            <input type="text" id="student_id" name="student_id" placeholder="Enter your ID number">
+                            <input type="text" id="student_id" name="student_id" placeholder="Enter your ID number" required>
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <label for="student_email">School Email</label>
+                    <div class="form-group">
+                        <label for="course">Course</label>
                         <div class="input-wrapper">
                             <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                                <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
                             </svg>
-                            <input type="email" id="student_email" name="student_email" placeholder="student@school.edu">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Teacher Fields -->
-                <div id="teacherFields" class="hidden role-fields">
-                    <div class="section-divider">
-                        <div class="section-title">Faculty Information</div>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="department">Department</label>
-                        <div class="input-wrapper">
-                            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>
-                            </svg>
-                            <input type="text" id="department" name="department" placeholder="e.g., Computer Science">
+                            <input type="text" id="course" name="course" placeholder="e.g., BS Computer Science" required>
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <label for="teacher_campus">Campus</label>
+                    <div class="form-group">
+                        <label for="campus">Campus</label>
                         <div class="input-wrapper">
                             <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                             </svg>
-                            <select id="teacher_campus" name="teacher_campus">
+                            <select id="campus" name="campus" required>
                                 <option value="">Select campus</option>
                                 <option value="CLI">CLI</option>
                                 <option value="CHS">CHS</option>
@@ -421,88 +806,98 @@
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <label for="teacher_id">ID Number</label>
-                        <div class="input-wrapper">
-                            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
-                            </svg>
-                            <input type="text" id="teacher_id" name="teacher_id" placeholder="Enter your ID number">
-                        </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="teacher_email">School Email</label>
+                    <div class="form-group">
+                        <label for="school_email">School Email</label>
                         <div class="input-wrapper">
                             <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
                             </svg>
-                            <input type="email" id="teacher_email" name="teacher_email" placeholder="faculty@school.edu">
+                            <input type="email" id="school_email" name="school_email" placeholder="student@school.edu" required>
                         </div>
                     </div>
-                </div>
-
-                <!-- Password Section -->
-                <div class="section-divider">
-                    <div class="section-title">Security</div>
-                </div>
-
-                <div class="input-group">
-                    <label for="password">Password</label>
-                    <div class="input-wrapper">
-                        <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
-                        </svg>
-                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
                     </div>
-                </div>
 
-                <div class="input-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <div class="input-wrapper">
-                        <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-                        </svg>
-                        <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" required>
+                    <!-- Password Section -->
+                    <div class="section-divider"><div class="section-title">Security</div></div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="input-wrapper">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
+                            </svg>
+                            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                        </div>
                     </div>
-                </div>
 
-                <button type="submit" class="register-btn">Create Account</button>
-                
-                <p class="login-link">Already have an account? <a href="login.html">Login here</a></p>
-            </form>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <div class="input-wrapper">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="sign-in-button">Create Account</button>
+
+                    <p class="signup-text">Already have an account? <a href="login.html">Login here</a></p>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
-        const roleSelect = document.getElementById('role');
-        const studentFields = document.getElementById('studentFields');
-        const teacherFields = document.getElementById('teacherFields');
+        // Handle role change: show/hide section and swap labels based on role
+        function handleRoleChange() {
+            const role = document.getElementById('role').value;
+            const infoSection = document.getElementById('student-info-section');
+            const courseLabel = document.querySelector('label[for="course"]');
+            const courseInput = document.getElementById('course');
+            const sectionTitle = document.querySelector('.section-title');
 
-        roleSelect.addEventListener('change', function() {
-            if(this.value === 'student') {
-                studentFields.classList.remove('hidden');
-                teacherFields.classList.add('hidden');
-            } else if(this.value === 'teacher') {
-                teacherFields.classList.remove('hidden');
-                studentFields.classList.add('hidden');
+            if (role === '') {
+                // No role selected - hide section
+                infoSection.classList.add('hidden');
             } else {
-                studentFields.classList.add('hidden');
-                teacherFields.classList.add('hidden');
-            }
-        });
+                // Role selected - show section
+                infoSection.classList.remove('hidden');
 
-        // Password validation
-        const form = document.getElementById('registerForm');
-        const password = document.getElementById('password');
-        const confirmPassword = document.getElementById('confirm_password');
-
-        form.addEventListener('submit', function(e) {
-            if(password.value !== confirmPassword.value) {
-                e.preventDefault();
-                alert('Passwords do not match!');
-                confirmPassword.focus();
+                if (role === 'teacher') {
+                    sectionTitle.textContent = 'Teacher Information';
+                    courseLabel.textContent = 'Department';
+                    courseInput.placeholder = 'e.g., Computer Science';
+                } else {
+                    sectionTitle.textContent = 'Student Information';
+                    courseLabel.textContent = 'Course';
+                    courseInput.placeholder = 'e.g., BS Computer Science';
+                }
             }
+        }
+
+        // Form submission
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const password = document.getElementById('password').value;
+            const confirm  = document.getElementById('confirm_password').value;
+
+            if (password !== confirm) {
+                alert('Passwords do not match.');
+                return;
+            }
+
+            const firstname = document.getElementById('firstname').value;
+            const middlename = document.getElementById('middlename').value;
+            const lastname = document.getElementById('lastname').value;
+            const role = document.getElementById('role').value;
+            const studentId = document.getElementById('student_id').value;
+
+            alert('Registration would be processed here.\n\n' +
+                  'Name: ' + firstname + ' ' + middlename + ' ' + lastname + '\n' +
+                  'Role: ' + role + '\n' +
+                  'ID:   ' + studentId);
         });
     </script>
 </body>
