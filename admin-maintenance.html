@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Maintenance</title>
+<style>
+body { margin:0; font-family:Arial; background:#eef1f4; }
+.layout { display:flex; height:100vh; }
+.sidebar {
+  width:240px; background:#1b5e20; color:white; padding:20px;
+}
+.sidebar a { color:#c8e6c9; display:block; margin:10px 0; text-decoration:none; }
+.sidebar a:hover { color:white; }
+.content { flex:1; padding:30px; }
+table {
+  background:white; width:100%; border-collapse:collapse;
+}
+th, td {
+  padding:12px; border-bottom:1px solid #ddd;
+}
+</style>
+</head>
+
+<body>
+<div class="layout">
+  <div class="sidebar">
+    <h2>Admin</h2>
+    <a href="admin-dashboard.html">Dashboard</a>
+    <a href="admin-inventory.html">Inventory</a>
+    <a href="admin-maintenance.html">Maintenance</a>
+    <a href="index.html">Logout</a>
+  </div>
+
+  <div class="content">
+    <h1>Maintenance Requests</h1>
+
+    <table>
+      <tr>
+        <th>Room</th>
+        <th>Issue</th>
+        <th>Priority</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td>Room 101</td>
+        <td>Broken Aircon</td>
+        <td>High</td>
+        <td>Pending</td>
+      </tr>
+      <tr>
+        <td>Lab 3</td>
+        <td>Computer Not Working</td>
+        <td>Medium</td>
+        <td>In Progress</td>
+      </tr>
+    </table>
+  </div>
+</div>
+</body>
+</html>

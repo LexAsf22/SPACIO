@@ -1,0 +1,1 @@
+console.log("College Laboratory & Classroom Management System Loaded");

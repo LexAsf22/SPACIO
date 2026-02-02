@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Issue - College Lab System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #2c5364 0%, #203a43 100%);
+            color: white;
+            padding: 0;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #2c5364;
+        }
+
+        .user-info h3 {
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+
+        .user-info p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+            flex: 1;
+        }
+
+        .nav-section {
+            margin-bottom: 25px;
+        }
+
+        .nav-label {
+            padding: 0 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.6;
+            margin-bottom: 10px;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: white;
+        }
+
+        .sidebar a.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-left-color: white;
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Main Content Styles */
+        .content {
+            flex: 1;
+            padding: 30px 40px;
+            overflow-y: auto;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #2c5364;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+        }
+
+        /* Main Form Section */
+        .form-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .form-section-title {
+            font-size: 18px;
+            color: #2c5364;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            font-weight: 600;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-label .required {
+            color: #f56565;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: #2c5364;
+            box-shadow: 0 0 0 3px rgba(44, 83, 100, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        /* Priority Selector */
+        .priority-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .priority-option {
+            position: relative;
+        }
+
+        .priority-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .priority-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .priority-option input[type="radio"]:checked + .priority-label {
+            background: #2c5364;
+            border-color: #2c5364;
+            color: white;
+        }
+
+        .priority-option input[type="radio"]:checked + .priority-label.low {
+            background: #48bb78;
+            border-color: #48bb78;
+        }
+
+        .priority-option input[type="radio"]:checked + .priority-label.medium {
+            background: #f6ad55;
+            border-color: #f6ad55;
+        }
+
+        .priority-option input[type="radio"]:checked + .priority-label.high {
+            background: #f56565;
+            border-color: #f56565;
+        }
+
+        .priority-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .priority-text {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* File Upload */
+        .file-upload-area {
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-area:hover {
+            border-color: #2c5364;
+            background: #f0f4ff;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .file-upload-text {
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .file-upload-hint {
+            font-size: 12px;
+            color: #999;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .uploaded-files {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .uploaded-file {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .file-icon {
+            font-size: 20px;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-size {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .file-remove {
+            background: #ffe6e6;
+            color: #f56565;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .file-remove:hover {
+            background: #f56565;
+            color: white;
+        }
+
+        /* Sidebar Info */
+        .info-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .info-card-title {
+            font-size: 16px;
+            color: #2c5364;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-icon {
+            font-size: 16px;
+            margin-top: 2px;
+        }
+
+        .info-text {
+            flex: 1;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* Recent Issues */
+        .recent-issue {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #f6ad55;
+        }
+
+        .recent-issue.resolved {
+            border-left-color: #48bb78;
+            opacity: 0.7;
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .issue-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .issue-badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-pending {
+            background: #fff5e6;
+            color: #f6ad55;
+        }
+
+        .badge-resolved {
+            background: #e6f9f0;
+            color: #48bb78;
+        }
+
+        .issue-details {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Form Actions */
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: #2c5364;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #1e3c48;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(44, 83, 100, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #2c5364;
+            border: 2px solid #2c5364;
+            padding: 10px 30px;
+        }
+
+        .btn-secondary:hover {
+            background: #f0f4ff;
+        }
+
+        /* Success Message */
+        .success-message {
+            display: none;
+            background: #e6f9f0;
+            border: 2px solid #48bb78;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            color: #48bb78;
+            font-weight: 600;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .success-message.show {
+            display: flex;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .form-container {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .priority-options {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+
+            .sidebar-header,
+            .nav-label,
+            .nav-text,
+            .sidebar-footer span {
+                display: none;
+            }
+
+            .sidebar a {
+                justify-content: center;
+                padding: 15px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .form-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <div class="user-avatar">👨‍🏫</div>
+                    <div class="user-info">
+                        <h3>Dr. Smith</h3>
+                        <p>Faculty ID: T-2024-015</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-label">Main Menu</div>
+                    <a href="teacher-dashboard.html">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                    <a href="teacher-classes.html">
+                        <span class="nav-icon">📚</span>
+                        <span class="nav-text">My Classes</span>
+                    </a>
+                    <a href="teacher-schedule.html">
+                        <span class="nav-icon">📅</span>
+                        <span class="nav-text">Schedule</span>
+                    </a>
+                    <a href="teacher-requests.html">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-text">Lab Requests</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Management</div>
+                    <a href="teacher-attendance.html">
+                        <span class="nav-icon">✅</span>
+                        <span class="nav-text">Attendance</span>
+                    </a>
+                    <a href="teacher-equipment.html">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">Equipment</span>
+                    </a>
+                    <a href="teacher-report.html" class="active">
+                        <span class="nav-icon">⚠️</span>
+                        <span class="nav-text">Report Issue</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Resources</div>
+                    <a href="teacher-reports.html">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-text">Reports</span>
+                    </a>
+                    <a href="teacher-help.html">
+                        <span class="nav-icon">❓</span>
+                        <span class="nav-text">Help & Support</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="index.html">
+                    <span class="nav-icon">🚪</span>
+                    <span class="nav-text">Logout</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <div class="header">
+                <h1>Report Classroom Issue</h1>
+                <p>Report any problems with equipment, facilities, or infrastructure</p>
+            </div>
+
+            <div id="successMessage" class="success-message">
+                <span>✅</span>
+                <span>Issue reported successfully! The maintenance team has been notified.</span>
+            </div>
+
+            <div class="form-container">
+                <!-- Main Form -->
+                <div class="form-section">
+                    <h2 class="form-section-title">Issue Details</h2>
+                    
+                    <form id="issueForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Campus <span class="required">*</span></label>
+                                <select class="form-select" id="campus" required>
+                                    <option value="">Select Campus</option>
+                                    <option value="main">Main Campus</option>
+                                    <option value="annex">Annex Campus</option>
+                                    <option value="downtown">Downtown Campus</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Building <span class="required">*</span></label>
+                                <select class="form-select" id="building" required>
+                                    <option value="">Select Building</option>
+                                    <option value="science">Science Building</option>
+                                    <option value="engineering">Engineering Building</option>
+                                    <option value="tech">Technology Building</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Room / Laboratory <span class="required">*</span></label>
+                                <input type="text" class="form-input" id="room" placeholder="e.g., Lab 102, Room A-301" required>
+                                <div class="form-hint">Specify the exact room or lab number</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Issue Type <span class="required">*</span></label>
+                                <select class="form-select" id="issueType" required>
+                                    <option value="">Select Issue Type</option>
+                                    <option value="equipment">🔧 Equipment Malfunction</option>
+                                    <option value="furniture">🪑 Furniture Damage</option>
+                                    <option value="hvac">🌡️ HVAC / Air Conditioning</option>
+                                    <option value="internet">📡 Internet / Network</option>
+                                    <option value="electrical">⚡ Electrical Issues</option>
+                                    <option value="plumbing">💧 Plumbing / Water</option>
+                                    <option value="lighting">💡 Lighting</option>
+                                    <option value="safety">⚠️ Safety Concern</option>
+                                    <option value="cleanliness">🧹 Cleanliness</option>
+                                    <option value="other">📝 Other</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label class="form-label">Priority Level <span class="required">*</span></label>
+                                <div class="priority-options">
+                                    <div class="priority-option">
+                                        <input type="radio" id="priorityLow" name="priority" value="low" required>
+                                        <label for="priorityLow" class="priority-label low">
+                                            <span class="priority-icon">🟢</span>
+                                            <span class="priority-text">Low</span>
+                                        </label>
+                                    </div>
+                                    <div class="priority-option">
+                                        <input type="radio" id="priorityMedium" name="priority" value="medium" required>
+                                        <label for="priorityMedium" class="priority-label medium">
+                                            <span class="priority-icon">🟡</span>
+                                            <span class="priority-text">Medium</span>
+                                        </label>
+                                    </div>
+                                    <div class="priority-option">
+                                        <input type="radio" id="priorityHigh" name="priority" value="high" required>
+                                        <label for="priorityHigh" class="priority-label high">
+                                            <span class="priority-icon">🔴</span>
+                                            <span class="priority-text">High</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-hint">
+                                    Low: Minor issues • Medium: Affects functionality • High: Urgent/Safety concern
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label class="form-label">Issue Title <span class="required">*</span></label>
+                                <input type="text" class="form-input" id="issueTitle" placeholder="Brief summary of the issue" required>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label class="form-label">Detailed Description <span class="required">*</span></label>
+                                <textarea class="form-textarea" id="description" placeholder="Please provide a detailed description of the issue, including when it occurred, what happened, and any relevant details..." required></textarea>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label class="form-label">Attach Photos or Documents (Optional)</label>
+                                <div class="file-upload-area" onclick="document.getElementById('fileInput').click()">
+                                    <div class="file-upload-icon">📎</div>
+                                    <div class="file-upload-text">Click to upload files</div>
+                                    <div class="file-upload-hint">Supported: JPG, PNG, PDF (Max 5MB each)</div>
+                                </div>
+                                <input type="file" id="fileInput" multiple accept="image/*,.pdf">
+                                <div id="uploadedFiles" class="uploaded-files"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Contact Phone</label>
+                                <input type="tel" class="form-input" id="phone" placeholder="Your contact number">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Best Time to Contact</label>
+                                <select class="form-select" id="contactTime">
+                                    <option value="">Select Time</option>
+                                    <option value="morning">Morning (8AM - 12PM)</option>
+                                    <option value="afternoon">Afternoon (12PM - 5PM)</option>
+                                    <option value="anytime">Anytime</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label class="form-label">Additional Notes</label>
+                                <textarea class="form-textarea" id="notes" placeholder="Any additional information that might be helpful..." style="min-height: 80px;"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="window.location.href='teacher-dashboard.html'">
+                                Cancel
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="submitIssue()">
+                                <span>📤</span>
+                                Submit Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Sidebar Information -->
+                <div class="info-section">
+                    <!-- Guidelines -->
+                    <div class="info-card">
+                        <h3 class="info-card-title">
+                            <span>ℹ️</span>
+                            Reporting Guidelines
+                        </h3>
+                        <div class="info-item">
+                            <span class="info-icon">🎯</span>
+                            <div class="info-text">
+                                Be specific about the location and nature of the issue
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">📸</span>
+                            <div class="info-text">
+                                Include photos when possible for faster resolution
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">⚡</span>
+                            <div class="info-text">
+                                Mark as high priority only for urgent or safety-related issues
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">📧</span>
+                            <div class="info-text">
+                                You'll receive email updates on the resolution progress
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Response Times -->
+                    <div class="info-card">
+                        <h3 class="info-card-title">
+                            <span>⏱️</span>
+                            Expected Response Times
+                        </h3>
+                        <div class="info-item">
+                            <span class="info-icon">🔴</span>
+                            <div class="info-text">
+                                <strong>High Priority:</strong> 2-4 hours response
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">🟡</span>
+                            <div class="info-text">
+                                <strong>Medium Priority:</strong> 24-48 hours response
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">🟢</span>
+                            <div class="info-text">
+                                <strong>Low Priority:</strong> 3-5 business days response
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Issues -->
+                    <div class="info-card">
+                        <h3 class="info-card-title">
+                            <span>📋</span>
+                            Your Recent Reports
+                        </h3>
+                        <div class="recent-issue">
+                            <div class="issue-header">
+                                <div class="issue-title">Projector Issue</div>
+                                <span class="issue-badge badge-pending">Pending</span>
+                            </div>
+                            <div class="issue-details">Lab 102 • Reported 2 hours ago</div>
+                        </div>
+                        <div class="recent-issue">
+                            <div class="issue-header">
+                                <div class="issue-title">AC Malfunction</div>
+                                <span class="issue-badge badge-pending">In Progress</span>
+                            </div>
+                            <div class="issue-details">Lab 205 • Reported yesterday</div>
+                        </div>
+                        <div class="recent-issue resolved">
+                            <div class="issue-header">
+                                <div class="issue-title">Broken Chairs</div>
+                                <span class="issue-badge badge-resolved">Resolved</span>
+                            </div>
+                            <div class="issue-details">Lab 103 • Resolved today</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // File upload handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadedFilesDiv = document.getElementById('uploadedFiles');
+        let uploadedFiles = [];
+
+        fileInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                if (file.size <= 5 * 1024 * 1024) { // 5MB limit
+                    uploadedFiles.push(file);
+                    addFileToList(file);
+                } else {
+                    alert(`${file.name} is too large. Maximum file size is 5MB.`);
+                }
+            });
+            fileInput.value = ''; // Reset input
+        });
+
+        function addFileToList(file) {
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'uploaded-file';
+            fileDiv.innerHTML = `
+                <span class="file-icon">📄</span>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${(file.size / 1024).toFixed(2)} KB</div>
+                </div>
+                <button class="file-remove" onclick="removeFile('${file.name}')">Remove</button>
+            `;
+            uploadedFilesDiv.appendChild(fileDiv);
+        }
+
+        function removeFile(fileName) {
+            uploadedFiles = uploadedFiles.filter(f => f.name !== fileName);
+            const fileElements = uploadedFilesDiv.children;
+            for (let i = 0; i < fileElements.length; i++) {
+                if (fileElements[i].querySelector('.file-name').textContent === fileName) {
+                    uploadedFilesDiv.removeChild(fileElements[i]);
+                    break;
+                }
+            }
+        }
+
+        function submitIssue() {
+            const form = document.getElementById('issueForm');
+            
+            // Basic validation
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Show success message
+            const successMessage = document.getElementById('successMessage');
+            successMessage.classList.add('show');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // Reset form and redirect
+            setTimeout(() => {
+                form.reset();
+                uploadedFiles = [];
+                uploadedFilesDiv.innerHTML = '';
+                successMessage.classList.remove('show');
+                window.location.href = 'teacher-dashboard.html';
+            }, 3000);
+        }
+
+        // Auto-hide success message when user starts interacting with form
+        const formInputs = document.querySelectorAll('input, select, textarea');
+        formInputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                document.getElementById('successMessage').classList.remove('show');
+            });
+        });
+    </script>
+</body>
+</html>

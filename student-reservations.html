@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reservations - College Lab System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 0;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #1e3c72;
+        }
+
+        .user-info h3 {
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+
+        .user-info p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+            flex: 1;
+        }
+
+        .nav-section {
+            margin-bottom: 25px;
+        }
+
+        .nav-label {
+            padding: 0 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.6;
+            margin-bottom: 10px;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: white;
+        }
+
+        .sidebar a.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-left-color: white;
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Main Content Styles */
+        .content {
+            flex: 1;
+            padding: 30px 40px;
+            overflow-y: auto;
+        }
+
+        .header {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 {
+            font-size: 28px;
+            color: #1e3c72;
+            margin-bottom: 5px;
+        }
+
+        .header-left p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Filter Section */
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .filter-select {
+            padding: 8px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-select:hover {
+            border-color: #667eea;
+        }
+
+        /* Stats Summary */
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-box {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e3c72;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-box.pending .stat-number {
+            color: #f6ad55;
+        }
+
+        .stat-box.approved .stat-number {
+            color: #48bb78;
+        }
+
+        .stat-box.rejected .stat-number {
+            color: #f56565;
+        }
+
+        /* Table Section */
+        .table-section {
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 20px 25px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-title {
+            font-size: 18px;
+            color: #1e3c72;
+            font-weight: 600;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-input {
+            padding: 8px 15px 8px 35px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 250px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+        }
+
+        th {
+            padding: 15px 25px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 20px 25px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .lab-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .lab-icon {
+            width: 40px;
+            height: 40px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .lab-details {
+            flex: 1;
+        }
+
+        .lab-name {
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 3px;
+        }
+
+        .lab-room {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .date-time {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .date {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .time {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .status-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .status-pending {
+            background: #fff5e6;
+            color: #f6ad55;
+        }
+
+        .status-approved {
+            background: #e6f9f0;
+            color: #48bb78;
+        }
+
+        .status-rejected {
+            background: #ffe6e6;
+            color: #f56565;
+        }
+
+        .status-completed {
+            background: #e6f0ff;
+            color: #667eea;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-view {
+            background: #e6f0ff;
+            color: #667eea;
+        }
+
+        .btn-view:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-cancel {
+            background: #ffe6e6;
+            color: #f56565;
+        }
+
+        .btn-cancel:hover {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-edit {
+            background: #fff5e6;
+            color: #f6ad55;
+        }
+
+        .btn-edit:hover {
+            background: #f6ad55;
+            color: white;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .empty-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .empty-text {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+
+            .sidebar-header,
+            .nav-label,
+            .nav-text,
+            .sidebar-footer {
+                display: none;
+            }
+
+            .sidebar a {
+                justify-content: center;
+                padding: 15px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .filter-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 12px 15px;
+            }
+
+            .lab-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <div class="user-avatar">👨‍🎓</div>
+                    <div class="user-info">
+                        <h3>John Doe</h3>
+                        <p>Student ID: 2024-001</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-label">Main Menu</div>
+                    <a href="student-dashboard.html">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                    <a href="student-reserve.html">
+                        <span class="nav-icon">🔬</span>
+                        <span class="nav-text">Reserve Lab</span>
+                    </a>
+                    <a href="student-reservations.html" class="active">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-text">My Reservations</span>
+                    </a>
+                    <a href="student-schedule.html">
+                        <span class="nav-icon">📅</span>
+                        <span class="nav-text">Schedule</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Resources</div>
+                    <a href="student-equipment.html">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">Equipment</span>
+                    </a>
+                    <a href="student-help.html">
+                        <span class="nav-icon">❓</span>
+                        <span class="nav-text">Help & Support</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="index.html">
+                    <span class="nav-icon">🚪</span>
+                    <span class="nav-text">Logout</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <div class="header">
+                <div class="header-left">
+                    <h1>My Reservations</h1>
+                    <p>View and manage your lab reservations</p>
+                </div>
+                <div class="header-right">
+                    <a href="student-reserve.html" class="btn btn-primary">
+                        <span>➕</span>
+                        New Reservation
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats Summary -->
+            <div class="stats-summary">
+                <div class="stat-box">
+                    <div class="stat-number">6</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-box pending">
+                    <div class="stat-number">2</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+                <div class="stat-box approved">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+                <div class="stat-box rejected">
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">Rejected</div>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <div class="filter-group">
+                    <span class="filter-label">Status:</span>
+                    <select class="filter-select">
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <span class="filter-label">Date Range:</span>
+                    <select class="filter-select">
+                        <option value="all">All Dates</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <span class="filter-label">Lab Type:</span>
+                    <select class="filter-select">
+                        <option value="all">All Labs</option>
+                        <option value="computer">Computer Lab</option>
+                        <option value="chemistry">Chemistry Lab</option>
+                        <option value="physics">Physics Lab</option>
+                        <option value="biology">Biology Lab</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Table Section -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h2 class="table-title">Reservation History</h2>
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" placeholder="Search reservations...">
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Laboratory</th>
+                            <th>Date & Time</th>
+                            <th>Duration</th>
+                            <th>Purpose</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="lab-info">
+                                    <div class="lab-icon">💻</div>
+                                    <div class="lab-details">
+                                        <div class="lab-name">Computer Lab</div>
+                                        <div class="lab-room">Room 102</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="date-time">
+                                    <span class="date">Feb 10, 2026</span>
+                                    <span class="time">2:00 PM - 4:00 PM</span>
+                                </div>
+                            </td>
+                            <td>2 hours</td>
+                            <td>Programming Project</td>
+                            <td><span class="status-badge status-pending">Pending</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="action-btn btn-view" title="View Details">👁️</button>
+                                    <button class="action-btn btn-edit" title="Edit">✏️</button>
+                                    <button class="action-btn btn-cancel" title="Cancel">❌</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="lab-info">
+                                    <div class="lab-icon">🧪</div>
+                                    <div class="lab-details">
+                                        <div class="lab-name">Chemistry Lab</div>
+                                        <div class="lab-room">Room 205</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="date-time">
+                                    <span class="date">Feb 12, 2026</span>
+                                    <span class="time">10:00 AM - 12:00 PM</span>
+                                </div>
+                            </td>
+                            <td>2 hours</td>
+                            <td>Organic Chemistry Experiment</td>
+                            <td><span class="status-badge status-approved">Approved</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="action-btn btn-view" title="View Details">👁️</button>
+                                    <button class="action-btn btn-cancel" title="Cancel">❌</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="lab-info">
+                                    <div class="lab-icon">⚗️</div>
+                                    <div class="lab-details">
+                                        <div class="lab-name">Physics Lab</div>
+                                        <div class="lab-room">Room 301</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="date-time">
+                                    <span class="date">Feb 08, 2026</span>
+                                    <span class="time">3:00 PM - 5:00 PM</span>
+                                </div>
+                            </td>
+                            <td>2 hours</td>
+                            <td>Mechanics Lab</td>
+                            <td><span class="status-badge status-approved">Approved</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="action-btn btn-view" title="View Details">👁️</button>
+                                    <button class="action-btn btn-cancel" title="Cancel">❌</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="lab-info">
+                                    <div class="lab-icon">🔬</div>
+                                    <div class="lab-details">
+                                        <div class="lab-name">Biology Lab</div>
+                                        <div class="lab-room">Room 401</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="date-time">
+                                    <span class="date">Feb 05, 2026</span>
+                                    <span class="time">1:00 PM - 3:00 PM</span>
+                                </div>
+                            </td>
+                            <td>2 hours</td>
+                            <td>Microscopy Study</td>
+                            <td><span class="status-badge status-rejected">Rejected</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="action-btn btn-view" title="View Details">👁️</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="lab-info">
+                                    <div class="lab-icon">💻</div>
+                                    <div class="lab-details">
+                                        <div class="lab-name">Computer Lab</div>
+                                        <div class="lab-room">Room 103</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="date-time">
+                                    <span class="date">Feb 03, 2026</span>
+                                    <span class="time">9:00 AM - 11:00 AM</span>
+                                </div>
+                            </td>
+                            <td>2 hours</td>
+                            <td>Database Project</td>
+                            <td><span class="status-badge status-approved">Approved</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="action-btn btn-view" title="View Details">👁️</button>
+                                    <button class="action-btn btn-cancel" title="Cancel">❌</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="lab-info">
+                                    <div class="lab-icon">🧪</div>
+                                    <div class="lab-details">
+                                        <div class="lab-name">Chemistry Lab</div>
+                                        <div class="lab-room">Room 206</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="date-time">
+                                    <span class="date">Jan 30, 2026</span>
+                                    <span class="time">2:00 PM - 4:00 PM</span>
+                                </div>
+                            </td>
+                            <td>2 hours</td>
+                            <td>Titration Experiment</td>
+                            <td><span class="status-badge status-completed">Completed</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="action-btn btn-view" title="View Details">👁️</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
