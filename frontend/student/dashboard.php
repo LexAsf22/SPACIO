@@ -3,11 +3,11 @@ include("../includes/header.php");
 checkRole('student');
 
 $user_id = $_SESSION['user']['id'];
+$user    = $_SESSION['user'];
 
-// AJAX request handler
-if(isset($_GET['fetch_stats'])){
-
-    $available_labs = $conn->query("SELECT * FROM laboratories")->num_rows;
+// ── AJAX handler ──────────────────────────────────────────
+if (isset($_GET['fetch_stats'])) {
+    $available_labs      = $conn->query("SELECT * FROM laboratories")->num_rows;
     $active_reservations = $conn->query("SELECT * FROM reservations WHERE user_id=$user_id AND status='Approved'")->num_rows;
 
     $upcoming = $conn->query("SELECT r.*, l.lab_name 
@@ -17,27 +17,25 @@ if(isset($_GET['fetch_stats'])){
         ORDER BY r.date ASC LIMIT 5");
 
     $rows = [];
-
-    while($r = $upcoming->fetch_assoc()){
+    while ($r = $upcoming->fetch_assoc()) {
         $rows[] = [
-            "lab"=>$r['lab_name'],
-            "date"=>date("F d, Y", strtotime($r['date'])),
-            "time"=>$r['time_slot'],
-            "status"=>$r['status']
+            "lab"    => $r['lab_name'],
+            "date"   => date("F d, Y", strtotime($r['date'])),
+            "time"   => $r['time_slot'],
+            "status" => $r['status'],
         ];
     }
 
     echo json_encode([
-        "labs"=>$available_labs,
-        "active"=>$active_reservations,
-        "rows"=>$rows
+        "labs"   => $available_labs,
+        "active" => $active_reservations,
+        "rows"   => $rows,
     ]);
-
     exit;
 }
 
-// Normal page load
-$available_labs = $conn->query("SELECT * FROM laboratories")->num_rows;
+// ── Normal page load ──────────────────────────────────────
+$available_labs      = $conn->query("SELECT * FROM laboratories")->num_rows;
 $active_reservations = $conn->query("SELECT * FROM reservations WHERE user_id=$user_id AND status='Approved'")->num_rows;
 
 $upcoming = $conn->query("SELECT r.*, l.lab_name 
@@ -47,107 +45,675 @@ $upcoming = $conn->query("SELECT r.*, l.lab_name
     ORDER BY r.date ASC LIMIT 5");
 ?>
 
-<h2>Student Dashboard</h2>
+<style>
+    /* ── Google Fonts ── */
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Literata:ital,wght@0,300;0,400;1,300&display=swap');
 
-<div style="display:flex; gap:20px; margin-top:20px;">
-    
-<div style="background:#4caf50;color:white;padding:20px;flex:1;border-radius:5px;">
-<h3>Available Labs</h3>
-<p id="availableLabs"><?php echo $available_labs; ?></p>
-</div>
+    /* ── Variables ── */
+    :root {
+        --night:   #0b1f0d;
+        --forest:  #122b14;
+        --canopy:  #1e4422;
+        --fern:    #2e6b34;
+        --moss:    #3d7a44;
+        --sprout:  #74bb7a;
+        --mist:    #b9debb;
+        --fog:     #e4f2e5;
+        --cream:   #f8f4ee;
+        --sand:    #ede6d8;
+        --gold:    #c49a2a;
+        --gold-lt: #e2bb5a;
+        --ink:     #141414;
+        --gray:    #6b7c6d;
+        --white6:  rgba(255,255,255,.06);
+        --white12: rgba(255,255,255,.12);
+    }
 
-<div style="background:#f39c12;color:white;padding:20px;flex:1;border-radius:5px;">
-<h3>Active Reservations</h3>
-<p id="activeReservations"><?php echo $active_reservations; ?></p>
-</div>
+    /* ── Reset dashboard area ── */
+    .dash-wrap {
+        font-family: 'Literata', Georgia, serif;
+        color: var(--ink);
+        padding: 0;
+        animation: dashIn .55s cubic-bezier(.22,1,.36,1) both;
+    }
 
-</div>
+    @keyframes dashIn {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 
-<h3 style="margin-top:30px;">Upcoming Reservations</h3>
+    /* ── Page header ── */
+    .dash-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 32px 36px 28px;
+        border-bottom: 1px solid rgba(30,68,34,.1);
+        background: #fff;
+    }
 
-<input 
-id="searchReservations"
-placeholder="Search reservations..."
-style="padding:10px;margin:10px 0;width:50%;"
->
+    .dash-header-left {}
 
-<table id="upcomingTable" border="1" cellpadding="10" cellspacing="0" style="border-collapse:collapse;width:100%;">
-<tr>
-<th>Lab</th>
-<th>Date</th>
-<th>Time Slot</th>
-<th>Status</th>
-</tr>
+    .dash-eyebrow {
+        font-family: 'Syne', sans-serif;
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+        color: var(--moss);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
 
-<?php while($r = $upcoming->fetch_assoc()){ ?>
-<tr>
-<td><?php echo $r['lab_name']; ?></td>
-<td><?php echo date("F d, Y", strtotime($r['date'])); ?></td>
-<td><?php echo $r['time_slot']; ?></td>
-<td><?php echo $r['status']; ?></td>
-</tr>
-<?php } ?>
+    .dash-eyebrow::before {
+        content: '';
+        width: 18px; height: 2px;
+        background: var(--gold);
+        border-radius: 2px;
+    }
 
-</table>
+    .dash-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.65rem;
+        font-weight: 800;
+        color: var(--forest);
+        letter-spacing: -.03em;
+        line-height: 1;
+    }
+
+    .dash-title span {
+        color: var(--moss);
+        font-style: italic;
+        font-family: 'Literata', serif;
+        font-weight: 300;
+    }
+
+    .dash-date {
+        font-size: .8rem;
+        color: var(--gray);
+        font-style: italic;
+    }
+
+    .refresh-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: 'Syne', sans-serif;
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        padding: 9px 18px;
+        background: var(--forest);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background .2s, transform .15s;
+    }
+
+    .refresh-btn:hover { background: var(--canopy); transform: translateY(-1px); }
+
+    .refresh-icon { font-size: .9rem; transition: transform .5s; }
+    .refresh-btn.spinning .refresh-icon { animation: spin .6s linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Main body ── */
+    .dash-body {
+        padding: 32px 36px;
+        background: var(--cream);
+        min-height: calc(100vh - 120px);
+    }
+
+    /* ── Stat cards ── */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 36px;
+    }
+
+    .stat-card {
+        background: #fff;
+        border: 1px solid rgba(30,68,34,.08);
+        border-radius: 14px;
+        padding: 26px 28px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition: box-shadow .2s, transform .2s;
+        animation: cardIn .5s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    .stat-card:hover {
+        box-shadow: 0 6px 24px rgba(18,43,20,.09);
+        transform: translateY(-2px);
+    }
+
+    .stat-card:nth-child(1) { animation-delay: .05s; }
+    .stat-card:nth-child(2) { animation-delay: .10s; }
+    .stat-card:nth-child(3) { animation-delay: .15s; }
+
+    @keyframes cardIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .stat-icon-wrap {
+        width: 52px; height: 52px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+
+    .stat-icon-wrap.green  { background: #e8f5e9; }
+    .stat-icon-wrap.amber  { background: #fff8e1; }
+    .stat-icon-wrap.blue   { background: #e3f2fd; }
+
+    .stat-body {}
+
+    .stat-label {
+        font-family: 'Syne', sans-serif;
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: var(--gray);
+        margin-bottom: 4px;
+    }
+
+    .stat-value {
+        font-family: 'Syne', sans-serif;
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--forest);
+        letter-spacing: -.04em;
+        line-height: 1;
+    }
+
+    .stat-sub {
+        font-size: .75rem;
+        color: var(--gray);
+        font-style: italic;
+        margin-top: 4px;
+    }
+
+    /* ── Section header ── */
+    .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .section-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--forest);
+        letter-spacing: -.02em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .section-title::before {
+        content: '';
+        width: 3px; height: 18px;
+        background: var(--gold);
+        border-radius: 2px;
+    }
+
+    /* ── Search ── */
+    .search-wrap {
+        position: relative;
+    }
+
+    .search-wrap .search-icon {
+        position: absolute;
+        left: 12px; top: 50%;
+        transform: translateY(-50%);
+        font-size: 14px;
+        opacity: .4;
+        pointer-events: none;
+    }
+
+    #searchReservations {
+        font-family: 'Literata', serif;
+        font-size: .85rem;
+        font-style: italic;
+        padding: 9px 14px 9px 36px;
+        background: #fff;
+        border: 1.5px solid rgba(30,68,34,.12);
+        border-radius: 8px;
+        color: var(--ink);
+        outline: none;
+        width: 240px;
+        transition: border-color .2s, box-shadow .2s;
+    }
+
+    #searchReservations::placeholder { color: #bbb; }
+
+    #searchReservations:focus {
+        border-color: var(--moss);
+        box-shadow: 0 0 0 3px rgba(61,122,68,.08);
+    }
+
+    /* ── Table ── */
+    .table-card {
+        background: #fff;
+        border: 1px solid rgba(30,68,34,.08);
+        border-radius: 14px;
+        overflow: hidden;
+        animation: cardIn .5s .2s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    #upcomingTable {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    #upcomingTable thead tr {
+        background: var(--forest);
+    }
+
+    #upcomingTable thead th {
+        font-family: 'Syne', sans-serif;
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.7);
+        padding: 14px 20px;
+        text-align: left;
+    }
+
+    #upcomingTable tbody tr {
+        border-bottom: 1px solid rgba(30,68,34,.06);
+        transition: background .15s;
+    }
+
+    #upcomingTable tbody tr:last-child { border-bottom: none; }
+    #upcomingTable tbody tr:hover { background: var(--fog); }
+
+    #upcomingTable tbody td {
+        font-size: .87rem;
+        color: var(--ink);
+        padding: 14px 20px;
+        font-family: 'Literata', serif;
+    }
+
+    #upcomingTable tbody td:first-child {
+        font-family: 'Syne', sans-serif;
+        font-weight: 700;
+        font-size: .85rem;
+        color: var(--forest);
+    }
+
+    /* ── Status badges ── */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-family: 'Syne', sans-serif;
+        font-size: .65rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 100px;
+    }
+
+    .badge::before {
+        content: '';
+        width: 5px; height: 5px;
+        border-radius: 50%;
+    }
+
+    .badge-approved  { background: #e8f5e9; color: #2e7d32; }
+    .badge-approved::before  { background: #4caf50; }
+    .badge-pending   { background: #fff8e1; color: #e65100; }
+    .badge-pending::before   { background: #ff9800; }
+    .badge-rejected  { background: #ffebee; color: #c62828; }
+    .badge-rejected::before  { background: #f44336; }
+    .badge-default   { background: #f5f5f5; color: #666; }
+    .badge-default::before   { background: #999; }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 52px 20px;
+        color: var(--gray);
+    }
+
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: .5; }
+
+    .empty-state p {
+        font-size: .9rem;
+        font-style: italic;
+        margin-bottom: 16px;
+    }
+
+    .empty-link {
+        font-family: 'Syne', sans-serif;
+        font-size: .78rem;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        padding: 10px 22px;
+        background: var(--forest);
+        color: #fff;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: background .2s;
+    }
+
+    .empty-link:hover { background: var(--canopy); }
+
+    /* ── Quick actions ── */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-bottom: 36px;
+    }
+
+    .qa-btn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        background: #fff;
+        border: 1.5px solid rgba(30,68,34,.1);
+        border-radius: 12px;
+        text-decoration: none;
+        transition: border-color .2s, background .2s, transform .15s, box-shadow .2s;
+        animation: cardIn .5s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    .qa-btn:nth-child(1) { animation-delay: .05s; }
+    .qa-btn:nth-child(2) { animation-delay: .10s; }
+    .qa-btn:nth-child(3) { animation-delay: .15s; }
+    .qa-btn:nth-child(4) { animation-delay: .20s; }
+
+    .qa-btn:hover {
+        border-color: var(--moss);
+        background: var(--fog);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(18,43,20,.08);
+    }
+
+    .qa-icon {
+        width: 36px; height: 36px;
+        background: var(--fog);
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+
+    .qa-text {}
+
+    .qa-label {
+        font-family: 'Syne', sans-serif;
+        font-size: .78rem;
+        font-weight: 700;
+        color: var(--forest);
+        display: block;
+        margin-bottom: 1px;
+    }
+
+    .qa-sub {
+        font-size: .7rem;
+        color: var(--gray);
+        font-style: italic;
+    }
+
+    /* ── Live indicator ── */
+    .live-dot {
+        display: inline-block;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: #4caf50;
+        animation: pulse 2s infinite;
+        margin-right: 2px;
+    }
+
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(76,175,80,.5); }
+        50%       { box-shadow: 0 0 0 5px rgba(76,175,80,0); }
+    }
+</style>
+
+<div class="dash-wrap">
+
+    <!-- ── Page header ── -->
+    <div class="dash-header">
+        <div class="dash-header-left">
+            <div class="dash-eyebrow">Student Portal</div>
+            <div class="dash-title">
+                Good <?php
+                    $h = (int)date('H');
+                    echo $h < 12 ? 'morning' : ($h < 17 ? 'afternoon' : 'evening');
+                ?>, <span><?php echo htmlspecialchars(explode(' ', $user['name'])[0]); ?></span>
+            </div>
+        </div>
+        <div>
+            <div class="dash-date">
+                <span class="live-dot"></span>
+                <?php echo date('l, F j, Y'); ?>
+            </div>
+        </div>
+        <button class="refresh-btn" id="refreshBtn" onclick="refreshDashboard()">
+            <span class="refresh-icon">↻</span> Refresh
+        </button>
+    </div>
+
+    <!-- ── Body ── -->
+    <div class="dash-body">
+
+        <!-- Stat cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon-wrap green">🔬</div>
+                <div class="stat-body">
+                    <div class="stat-label">Available Labs</div>
+                    <div class="stat-value" id="availableLabs"><?php echo $available_labs; ?></div>
+                    <div class="stat-sub">Ready to reserve</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrap amber">📋</div>
+                <div class="stat-body">
+                    <div class="stat-label">Active Reservations</div>
+                    <div class="stat-value" id="activeReservations"><?php echo $active_reservations; ?></div>
+                    <div class="stat-sub">Currently approved</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrap blue">🏫</div>
+                <div class="stat-body">
+                    <div class="stat-label">Campus</div>
+                    <div class="stat-value" style="font-size:1.1rem; letter-spacing:-.01em;"><?php echo htmlspecialchars($user['campus']); ?></div>
+                    <div class="stat-sub"><?php echo htmlspecialchars($user['course'] ?? 'Student'); ?></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="section-head" style="margin-bottom:14px;">
+            <div class="section-title">Quick Actions</div>
+        </div>
+
+        <div class="quick-actions">
+            <a class="qa-btn" href="../student/reserve_lab.php">
+                <div class="qa-icon">🗓️</div>
+                <div class="qa-text">
+                    <span class="qa-label">Reserve Lab</span>
+                    <span class="qa-sub">Book a lab session</span>
+                </div>
+            </a>
+            <a class="qa-btn" href="../student/reserve_equipment.php">
+                <div class="qa-icon">🔧</div>
+                <div class="qa-text">
+                    <span class="qa-label">Reserve Equipment</span>
+                    <span class="qa-sub">Borrow equipment</span>
+                </div>
+            </a>
+            <a class="qa-btn" href="../student/my_reservations.php">
+                <div class="qa-icon">📂</div>
+                <div class="qa-text">
+                    <span class="qa-label">My Reservations</span>
+                    <span class="qa-sub">View all bookings</span>
+                </div>
+            </a>
+            <a class="qa-btn" href="../student/view_computers.php">
+                <div class="qa-icon">💻</div>
+                <div class="qa-text">
+                    <span class="qa-label">View Computers</span>
+                    <span class="qa-sub">Check availability</span>
+                </div>
+            </a>
+        </div>
+
+        <!-- Upcoming reservations table -->
+        <div class="section-head">
+            <div class="section-title">Upcoming Reservations</div>
+            <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchReservations" placeholder="Search reservations…">
+            </div>
+        </div>
+
+        <div class="table-card">
+            <table id="upcomingTable">
+                <thead>
+                    <tr>
+                        <th>Laboratory</th>
+                        <th>Date</th>
+                        <th>Time Slot</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php
+                $hasRows = false;
+                while ($r = $upcoming->fetch_assoc()):
+                    $hasRows = true;
+                    $status  = $r['status'];
+                    $badgeClass = match(strtolower($status)) {
+                        'approved' => 'badge-approved',
+                        'pending'  => 'badge-pending',
+                        'rejected' => 'badge-rejected',
+                        default    => 'badge-default',
+                    };
+                ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($r['lab_name']); ?></td>
+                    <td><?php echo date("F d, Y", strtotime($r['date'])); ?></td>
+                    <td><?php echo htmlspecialchars($r['time_slot']); ?></td>
+                    <td><span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($status); ?></span></td>
+                </tr>
+                <?php endwhile; ?>
+
+                <?php if (!$hasRows): ?>
+                <tr id="emptyRow">
+                    <td colspan="4">
+                        <div class="empty-state">
+                            <div class="empty-icon">📭</div>
+                            <p>No upcoming reservations found.</p>
+                            <a class="empty-link" href="../student/reserve_lab.php">Reserve a Lab →</a>
+                        </div>
+                    </td>
+                </tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+    </div><!-- /.dash-body -->
+</div><!-- /.dash-wrap -->
 
 <script>
+    // ── Status badge helper ──
+    function badgeClass(status) {
+        const s = status.toLowerCase();
+        if (s === 'approved') return 'badge badge-approved';
+        if (s === 'pending')  return 'badge badge-pending';
+        if (s === 'rejected') return 'badge badge-rejected';
+        return 'badge badge-default';
+    }
 
-// Refresh dashboard data
-function refreshDashboard(){
+    // ── Refresh dashboard ──
+    function refreshDashboard() {
+        const btn = document.getElementById('refreshBtn');
+        btn.classList.add('spinning');
 
-fetch(window.location.pathname + "?fetch_stats=1")
-.then(res => res.json())
-.then(data => {
+        fetch(window.location.pathname + '?fetch_stats=1')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('availableLabs').textContent      = data.labs;
+                document.getElementById('activeReservations').textContent = data.active;
 
-document.getElementById("availableLabs").textContent = data.labs;
-document.getElementById("activeReservations").textContent = data.active;
+                const tbody = document.querySelector('#upcomingTable tbody');
+                tbody.innerHTML = '';
 
-const table = document.getElementById("upcomingTable");
-const rows = table.querySelectorAll("tr:not(:first-child)");
-rows.forEach(r => r.remove());
+                if (data.rows.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📭</div>
+                                    <p>No upcoming reservations found.</p>
+                                    <a class="empty-link" href="../student/reserve_lab.php">Reserve a Lab →</a>
+                                </div>
+                            </td>
+                        </tr>`;
+                } else {
+                    data.rows.forEach(r => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${r.lab}</td>
+                            <td>${r.date}</td>
+                            <td>${r.time}</td>
+                            <td><span class="${badgeClass(r.status)}">${r.status}</span></td>`;
+                        tbody.appendChild(tr);
+                    });
+                }
+            })
+            .catch(() => {})
+            .finally(() => {
+                setTimeout(() => btn.classList.remove('spinning'), 600);
+            });
+    }
 
-data.rows.forEach(r => {
+    // Auto-refresh every 60 s
+    setInterval(refreshDashboard, 60000);
 
-const tr = document.createElement("tr");
-
-tr.innerHTML = `
-<td>${r.lab}</td>
-<td>${r.date}</td>
-<td>${r.time}</td>
-<td>${r.status}</td>
-`;
-
-table.appendChild(tr);
-
-});
-
-});
-}
-
-// Auto refresh every 60 seconds
-setInterval(refreshDashboard, 60000);
-
-
-// Search filter with debounce
-let debounce;
-
-document.getElementById("searchReservations").addEventListener("keyup", function(){
-
-clearTimeout(debounce);
-
-debounce = setTimeout(()=>{
-
-const filter = this.value.toLowerCase();
-const rows = document.querySelectorAll("#upcomingTable tr:not(:first-child)");
-
-rows.forEach(row=>{
-row.style.display = row.textContent.toLowerCase().includes(filter) ? "" : "none";
-});
-
-},200);
-
-});
-
+    // ── Search with debounce ──
+    let debounce;
+    document.getElementById('searchReservations').addEventListener('keyup', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+            const filter = this.value.toLowerCase();
+            document.querySelectorAll('#upcomingTable tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+            });
+        }, 200);
+    });
 </script>
 
 <?php include("../includes/footer.php"); ?>

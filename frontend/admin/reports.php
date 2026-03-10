@@ -1,5 +1,6 @@
 <?php
 include("../includes/header.php");
+include(__DIR__ . "/../../backend/config/helpers.php");
 checkRole('admin');
 
 $total_reservations = $conn->query("SELECT * FROM reservations")->num_rows;

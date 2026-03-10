@@ -1,5 +1,6 @@
 <?php
 include("../includes/header.php");
+include(__DIR__ . "/../../backend/config/helpers.php");
 checkRole('admin');
 
 if(isset($_GET['status'])){
