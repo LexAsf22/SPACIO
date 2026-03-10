@@ -1,5 +1,6 @@
 <?php
 include("../includes/header.php");
+include("../../backend/config/helpers.php");
 checkRole('student');
 
 // Handle submission

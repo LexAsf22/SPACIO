@@ -1,6 +1,9 @@
 <?php
-include("../includes/header.php");
-checkRole('student');
+session_start();
+include("../../backend/config/database.php");
+include("../../backend/config/auth.php");
+include("../../backend/config/helpers.php"); // IMPORTANT
+?>
 
 // Handle submission
 if(isset($_POST['reserve'])){

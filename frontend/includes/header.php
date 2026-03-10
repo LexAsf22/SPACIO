@@ -2,10 +2,18 @@
 // frontend/includes/header.php
 include("../../backend/config/auth.php");
 include("../../backend/config/database.php");
-checkLogin(); // ensure the user is logged in
+checkLogin();
 
 $user = $_SESSION['user'];
 $role = $user['role'];
+
+$dashboardLinks = [
+    'student' => '../student/dashboard.php',
+    'teacher' => '../teacher/dashboard.php',
+    'admin'   => '../admin/dashboard.php',
+];
+
+$dashboardLink = $dashboardLinks[$role] ?? '../../index.php';
 ?>
 
 <!DOCTYPE html>
@@ -17,7 +25,7 @@ $role = $user['role'];
         body {margin:0; font-family:Arial;}
         .sidebar {
             width:200px;
-            background:#2c5f2e; /* green school design */
+            background:#2c5f2e;
             color:white;
             height:100vh;
             position:fixed;
@@ -46,7 +54,7 @@ $role = $user['role'];
 <div class="sidebar">
     <h3><?php echo ucfirst($role); ?> Menu</h3>
 
-    <a href="../../dashboard.php">Dashboard</a>
+    <a href="<?php echo $dashboardLink; ?>">Dashboard</a>
 
     <?php if($role == "student"){ ?>
         <a href="../student/reserve_lab.php">Reserve Lab</a>
@@ -73,5 +81,5 @@ $role = $user['role'];
 
 <div class="content">
 <div class="topbar">
-    Welcome, <?php echo $user['name']; ?> | Campus: <?php echo $user['campus']; ?>
+    Welcome, <?php echo htmlspecialchars($user['name']); ?> | Campus: <?php echo htmlspecialchars($user['campus']); ?>
 </div>
