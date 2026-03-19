@@ -1,46 +1,53 @@
 <?php
-session_start();
-include("backend/config/database.php");
+// login.php (root)
+require_once "backend/config/database.php";
+require_once "backend/config/helpers.php";
+require_once "backend/config/auth.php";
 
 // Redirect already-logged-in users
-if (isset($_SESSION['user'])) {
-    $role = $_SESSION['user']['role'];
-    $dashboards = [
-        'student' => 'frontend/student/dashboard.php',
-        'teacher' => 'frontend/teacher/dashboard.php',
-        'admin'   => 'frontend/admin/dashboard.php',
-    ];
-    header("Location: " . ($dashboards[$role] ?? 'index.php'));
-    exit;
-}
+redirectIfLoggedIn();
 
 $error = null;
 
 if (isset($_POST['login'])) {
-    $email    = trim($_POST['email']);
-    $password = $_POST['password'];
+    $email    = trim($_POST['email']    ?? '');
+    $password =      $_POST['password'] ?? '';
 
-    $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $res = $stmt->get_result();
+    // ── Call Django auth API ──
+    $result = djangoPost('/api/v1/auth/login/', [
+        'email'    => $email,
+        'password' => $password,
+    ]);
 
-    if ($res->num_rows > 0) {
-        $user = $res->fetch_assoc();
-        if (password_verify($password, $user['password'])) {
-            $_SESSION['user'] = $user;
-            $dashboards = [
-                'student' => 'frontend/student/dashboard.php',
-                'teacher' => 'frontend/teacher/dashboard.php',
-                'admin'   => 'frontend/admin/dashboard.php',
-            ];
-            header("Location: " . ($dashboards[$user['role']] ?? 'index.php'));
-            exit;
-        } else {
-            $error = "Incorrect password. Please try again.";
-        }
+    if ($result['success'] && isset($result['data']['access'])) {
+
+        $data = $result['data'];
+
+        // Build user array from Django response
+        $user = [
+            'id'    => $data['user']['id'],
+            'name'  => $data['user']['name'],
+            'email' => $data['user']['email'],
+            'role'  => $data['user']['role'],
+        ];
+
+        // Store JWT + user in session (defined in auth.php)
+        storeAuthSession($user, $data['access'], $data['refresh']);
+
+        // Redirect to role dashboard
+        $dashboards = [
+            'student' => 'frontend/student/dashboard.php',
+            'teacher' => 'frontend/teacher/dashboard.php',
+            'admin'   => 'frontend/admin/dashboard.php',
+        ];
+        header("Location: " . ($dashboards[$user['role']] ?? 'index.php'));
+        exit;
+
     } else {
-        $error = "No account found with that email address.";
+        // Show error from Django response, or a fallback message
+        $error = $result['data']['detail']
+              ?? $result['data']['message']
+              ?? "Invalid email or password. Please try again.";
     }
 }
 ?>
@@ -197,7 +204,6 @@ if (isset($_POST['login'])) {
             margin-bottom: 52px;
         }
 
-        /* Feature list */
         .left-features {
             list-style: none;
             display: flex;
@@ -227,7 +233,6 @@ if (isset($_POST['login'])) {
             flex-shrink: 0;
         }
 
-        /* Bottom decoration */
         .left-deco-ring {
             position: absolute;
             width: 420px; height: 420px;
@@ -246,7 +251,6 @@ if (isset($_POST['login'])) {
             position: relative;
         }
 
-        /* Subtle divider line */
         .panel-right::before {
             content: '';
             position: absolute;
@@ -331,6 +335,21 @@ if (isset($_POST['login'])) {
             80%       { transform: translateX(4px); }
         }
 
+        /* ══ SESSION EXPIRED NOTICE ══ */
+        .notice-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(196,154,42,.10);
+            border: 1px solid rgba(196,154,42,.3);
+            border-radius: 10px;
+            padding: 13px 16px;
+            margin-bottom: 24px;
+            font-size: .83rem;
+            color: #e2bb5a;
+            font-style: italic;
+        }
+
         /* ══ FORM ══ */
         .form-group {
             margin-bottom: 20px;
@@ -386,7 +405,6 @@ if (isset($_POST['login'])) {
             box-shadow: 0 0 0 4px rgba(116,187,122,.08);
         }
 
-        /* Password toggle */
         .pw-toggle {
             position: absolute;
             right: 13px; top: 50%;
@@ -406,7 +424,6 @@ if (isset($_POST['login'])) {
 
         .pw-toggle:hover { color: var(--sprout); }
 
-        /* Options row */
         .options-row {
             display: flex;
             align-items: center;
@@ -446,7 +463,6 @@ if (isset($_POST['login'])) {
 
         .forgot-link:hover { color: var(--gold); }
 
-        /* Submit button */
         .btn-submit {
             width: 100%;
             padding: 15px;
@@ -486,7 +502,6 @@ if (isset($_POST['login'])) {
         .btn-arrow { transition: transform .2s; font-size: 1rem; }
         .btn-submit:hover .btn-arrow { transform: translateX(4px); }
 
-        /* Divider */
         .divider {
             display: flex;
             align-items: center;
@@ -497,7 +512,6 @@ if (isset($_POST['login'])) {
         .divider hr { flex: 1; border: none; border-top: 1px solid rgba(255,255,255,.07); }
         .divider span { font-size: .68rem; color: rgba(255,255,255,.2); letter-spacing: .1em; text-transform: uppercase; font-family: 'Syne', sans-serif; }
 
-        /* Sign up */
         .signup-row {
             text-align: center;
             font-size: .82rem;
@@ -518,7 +532,6 @@ if (isset($_POST['login'])) {
 
         .signup-row a:hover { color: var(--mist); }
 
-        /* ══ FOOTER ══ */
         footer {
             position: relative; z-index: 1;
             background: rgba(0,0,0,.2);
@@ -545,7 +558,6 @@ if (isset($_POST['login'])) {
             font-style: italic;
         }
 
-        /* ══ RESPONSIVE ══ */
         @media (max-width: 860px) {
             .page-wrap { grid-template-columns: 1fr; }
             .panel-left { display: none; }
@@ -616,6 +628,13 @@ if (isset($_POST['login'])) {
 
             <h1 class="card-title">Sign in to<br>Spacio</h1>
             <p class="card-sub">Enter your credentials — we'll route you to the right dashboard automatically.</p>
+
+            <?php if (($_GET['reason'] ?? '') === 'session_expired'): ?>
+            <div class="notice-box">
+                <span>🕐</span>
+                <span>Your session expired. Please sign in again.</span>
+            </div>
+            <?php endif; ?>
 
             <?php if ($error): ?>
             <div class="error-box">

@@ -1,41 +1,56 @@
 <?php
+// frontend/student/reserve_equipment.php
 include("../includes/header.php");
 checkRole('student');
 
+$user_id = (int) $_SESSION['user']['id'];
+
+// ── Handle reservation form submission ────────────────────────────────────────
 if (isset($_POST['reserve'])) {
-    $equipment_id = (int) $_POST['equipment'];
-    $date         = $_POST['date'];
-    $user_id      = (int) $_SESSION['user']['id'];
+    $equipment_id = (int)  $_POST['equipment'];
+    $date         =  trim( $_POST['date'] ?? '');
 
     if ($date < date('Y-m-d')) {
         setFlash("Please select a future date.", "error");
     } else {
-        $check = $conn->prepare("
-            SELECT id FROM reservations
-            WHERE equipment_id = ? AND date = ? AND status != 'Rejected'
-        ");
-        $check->bind_param("is", $equipment_id, $date);
-        $check->execute();
-        $check->store_result();
+        $result = djangoPost('/api/v1/reservations/', [
+            'user_id'      => $user_id,
+            'equipment_id' => $equipment_id,
+            'date'         => $date,
+            'type'         => 'equipment',
+        ]);
 
-        if ($check->num_rows > 0) {
-            setFlash("That equipment is already reserved on this date.", "error");
+        if ($result['success']) {
+            setFlash("Equipment reservation submitted! Waiting for admin approval.", "success");
         } else {
-            $stmt = $conn->prepare("
-                INSERT INTO reservations (user_id, equipment_id, date, status)
-                VALUES (?, ?, ?, 'Pending')
-            ");
-            $stmt->bind_param("iis", $user_id, $equipment_id, $date);
-            if ($stmt->execute()) {
-                setFlash("Equipment reservation submitted! Waiting for admin approval.", "success");
-            } else {
-                setFlash("Something went wrong. Please try again.", "error");
-            }
+            $msg = $result['data']['detail']
+                ?? $result['data']['message']
+                ?? "Something went wrong. Please try again.";
+            setFlash($msg, "error");
         }
     }
 
     header("Location: " . $_SERVER['PHP_SELF']);
     exit;
+}
+
+// ── Fetch available equipment for dropdown ────────────────────────────────────
+$equipResult    = djangoGet('/api/v1/availability/equipment/');
+$equip_by_campus = [];
+
+if ($equipResult['success'] && isset($equipResult['data'])) {
+    foreach ($equipResult['data'] as $e) {
+        $campus = $e['campus'] ?? 'Other';
+        $equip_by_campus[$campus][] = $e;
+    }
+}
+
+// ── Fetch student's recent equipment reservations ─────────────────────────────
+$recentResult = djangoGet('/api/v1/reservations/my/?type=equipment&limit=5&user_id=' . $user_id);
+$recent_rows  = [];
+
+if ($recentResult['success'] && isset($recentResult['data'])) {
+    $recent_rows = $recentResult['data']['results'] ?? $recentResult['data'] ?? [];
 }
 ?>
 
@@ -51,28 +66,15 @@ if (isset($_POST['reserve'])) {
             </label>
             <select name="equipment" required style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;">
                 <option value="">-- Choose Equipment --</option>
-                <?php
-                $campuses = ['Campus A', 'Campus B'];
-                foreach ($campuses as $campus):
-                    $equipment = $conn->query("
-                        SELECT e.*, l.lab_name
-                        FROM   equipment e
-                        JOIN   laboratories l ON e.lab_id = l.id
-                        WHERE  l.campus = '$campus'
-                        AND    e.quantity > 0
-                        AND    e.status = 'Available'
-                        ORDER  BY l.lab_name, e.equipment_name
-                    ");
-                    if ($equipment->num_rows === 0) continue;
-                ?>
-                    <optgroup label="── <?php echo $campus; ?> ──">
-                        <?php while ($e = $equipment->fetch_assoc()): ?>
-                            <option value="<?php echo $e['id']; ?>">
-                                <?php echo htmlspecialchars($e['equipment_name']); ?>
-                                — <?php echo htmlspecialchars($e['lab_name']); ?>
-                                (<?php echo (int)$e['quantity']; ?> available)
+                <?php foreach ($equip_by_campus as $campus => $items): ?>
+                    <optgroup label="── <?php echo htmlspecialchars($campus); ?> ──">
+                        <?php foreach ($items as $e): ?>
+                            <option value="<?php echo (int) $e['id']; ?>">
+                                <?php echo htmlspecialchars($e['equipment_name'] ?? $e['name'] ?? ''); ?>
+                                — <?php echo htmlspecialchars($e['lab_name'] ?? ''); ?>
+                                (<?php echo (int) ($e['quantity'] ?? 0); ?> available)
                             </option>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     </optgroup>
                 <?php endforeach; ?>
             </select>
@@ -114,23 +116,7 @@ if (isset($_POST['reserve'])) {
 <div style="margin-top:36px;">
     <h3 style="margin-bottom:12px;">Your Recent Equipment Reservations</h3>
 
-    <?php
-    $user_id = (int) $_SESSION['user']['id'];
-    $recent  = $conn->prepare("
-        SELECT r.*, e.equipment_name, l.lab_name
-        FROM   reservations r
-        JOIN   equipment    e ON r.equipment_id = e.id
-        JOIN   laboratories l ON e.lab_id       = l.id
-        WHERE  r.user_id = ? AND r.equipment_id IS NOT NULL
-        ORDER  BY r.created_at DESC
-        LIMIT  5
-    ");
-    $recent->bind_param("i", $user_id);
-    $recent->execute();
-    $recent_result = $recent->get_result();
-    ?>
-
-    <?php if ($recent_result->num_rows === 0): ?>
+    <?php if (empty($recent_rows)): ?>
         <p style="color:#888; font-style:italic;">No equipment reservations yet.</p>
     <?php else: ?>
         <table border="1" cellpadding="10" cellspacing="0"
@@ -144,8 +130,8 @@ if (isset($_POST['reserve'])) {
                 </tr>
             </thead>
             <tbody>
-            <?php while ($r = $recent_result->fetch_assoc()):
-                $status = $r['status'];
+            <?php foreach ($recent_rows as $r):
+                $status = $r['status'] ?? 'Pending';
                 $badge  = match($status) {
                     'Approved' => 'background:#d4edda; color:#155724;',
                     'Rejected' => 'background:#f8d7da; color:#721c24;',
@@ -153,25 +139,25 @@ if (isset($_POST['reserve'])) {
                 };
             ?>
                 <tr>
-                    <td><?php echo htmlspecialchars($r['equipment_name']); ?></td>
-                    <td><?php echo htmlspecialchars($r['lab_name']);       ?></td>
-                    <td><?php echo date("F d, Y", strtotime($r['date'])); ?></td>
+                    <td><?php echo htmlspecialchars($r['equipment_name'] ?? '—'); ?></td>
+                    <td><?php echo htmlspecialchars($r['lab_name']       ?? '—'); ?></td>
+                    <td><?php echo isset($r['date']) ? date("F d, Y", strtotime($r['date'])) : '—'; ?></td>
                     <td>
                         <span style="padding:3px 10px; border-radius:12px; font-size:.82rem; <?php echo $badge; ?>">
                             <?php echo htmlspecialchars($status); ?>
                         </span>
                     </td>
                 </tr>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
             </tbody>
         </table>
     <?php endif; ?>
 </div>
 
 <script>
-document.getElementById('reserveEqForm').addEventListener('submit', function(e) {
+document.getElementById('reserveEqForm').addEventListener('submit', function (e) {
     if (!confirm("Submit this equipment reservation?")) e.preventDefault();
 });
 </script>
 
-<?php include("../includes/footer.php"); ?> 
+<?php include("../includes/footer.php"); ?>

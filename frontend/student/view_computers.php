@@ -1,14 +1,15 @@
 <?php
+// frontend/student/view_computers.php
 include("../includes/header.php");
 checkRole('student');
 
-// FIX: JOIN with laboratories instead of querying inside the loop
-$computers = $conn->query("
-    SELECT c.*, l.lab_name
-    FROM   computers c
-    JOIN   laboratories l ON c.lab_id = l.id
-    ORDER  BY l.lab_name, c.computer_name
-");
+// ── Fetch computers from Django ───────────────────────────────────────────────
+$result    = djangoGet('/api/v1/labs/computers/');
+$computers = [];
+
+if ($result['success'] && isset($result['data'])) {
+    $computers = $result['data']['results'] ?? $result['data'] ?? [];
+}
 ?>
 
 <h2>Available Computers</h2>
@@ -26,20 +27,20 @@ $computers = $conn->query("
         </tr>
     </thead>
     <tbody>
-    <?php if ($computers->num_rows === 0): ?>
+    <?php if (empty($computers)): ?>
         <tr>
             <td colspan="3" style="text-align:center; color:#888; font-style:italic;">
                 No computers on record.
             </td>
         </tr>
     <?php else: ?>
-        <?php while ($c = $computers->fetch_assoc()): ?>
+        <?php foreach ($computers as $c): ?>
         <tr>
-            <td><?php echo htmlspecialchars($c['lab_name']);      ?></td>
-            <td><?php echo htmlspecialchars($c['computer_name']); ?></td>
-            <td><?php echo htmlspecialchars($c['status']);        ?></td>
+            <td><?php echo htmlspecialchars($c['lab_name']      ?? '—'); ?></td>
+            <td><?php echo htmlspecialchars($c['computer_name'] ?? '—'); ?></td>
+            <td><?php echo htmlspecialchars($c['status']        ?? '—'); ?></td>
         </tr>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     <?php endif; ?>
     </tbody>
 </table>

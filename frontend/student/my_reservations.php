@@ -1,38 +1,33 @@
 <?php
+// frontend/student/my_reservations.php
 include("../includes/header.php");
 checkRole('student');
 
 $user_id = (int) $_SESSION['user']['id'];
 
-$stmt = $conn->prepare("
-    SELECT r.*, 
-           l.lab_name, 
-           e.equipment_name
-    FROM   reservations r
-    LEFT JOIN laboratories l ON r.lab_id       = l.id
-    LEFT JOIN equipment    e ON r.equipment_id  = e.id
-    WHERE  r.user_id = ?
-    ORDER  BY r.date DESC
-");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$reservations = $stmt->get_result();
+// ── Fetch all reservations from Django ────────────────────────────────────────
+$result       = djangoGet('/api/v1/reservations/my/?user_id=' . $user_id);
+$reservations = [];
+
+if ($result['success'] && isset($result['data'])) {
+    $reservations = $result['data']['results'] ?? $result['data'] ?? [];
+}
 ?>
 
 <h2>My Reservations</h2>
 
-<?php if ($reservations->num_rows === 0): ?>
+<?php if (empty($reservations)): ?>
     <p style="color:#888; font-style:italic; margin-top:20px;">
-        You have no reservations yet. 
-        <a href="/spacio/frontend/student/reserve_lab.php">Reserve a lab</a> or 
+        You have no reservations yet.
+        <a href="/spacio/frontend/student/reserve_lab.php">Reserve a lab</a> or
         <a href="/spacio/frontend/student/reserve_equipment.php">reserve equipment</a>.
     </p>
 <?php else: ?>
 
-    <input 
-        type="text" 
-        id="searchRes" 
-        placeholder="Search reservations..." 
+    <input
+        type="text"
+        id="searchRes"
+        placeholder="Search reservations..."
         style="padding:10px; margin:10px 0; width:50%; border:1px solid #ccc; border-radius:5px;"
     >
 
@@ -48,22 +43,23 @@ $reservations = $stmt->get_result();
             </tr>
         </thead>
         <tbody>
-        <?php while ($r = $reservations->fetch_assoc()): ?>
-            <?php
-                $isLab   = !empty($r['lab_id']);
-                $type    = $isLab ? 'Lab' : 'Equipment';
-                $name    = $isLab ? $r['lab_name'] : $r['equipment_name'];
-                $status  = $r['status'];
-                $badge   = match($status) {
-                    'Approved' => 'background:#d4edda; color:#155724;',
-                    'Rejected' => 'background:#f8d7da; color:#721c24;',
-                    default    => 'background:#fff3cd; color:#856404;',
-                };
-            ?>
+        <?php foreach ($reservations as $r):
+            $isLab  = !empty($r['lab_id']);
+            $type   = $isLab ? 'Lab' : 'Equipment';
+            $name   = $isLab
+                ? ($r['lab_name']       ?? '—')
+                : ($r['equipment_name'] ?? '—');
+            $status = $r['status'] ?? 'Pending';
+            $badge  = match($status) {
+                'Approved' => 'background:#d4edda; color:#155724;',
+                'Rejected' => 'background:#f8d7da; color:#721c24;',
+                default    => 'background:#fff3cd; color:#856404;',
+            };
+        ?>
             <tr>
                 <td><?php echo $type; ?></td>
-                <td><?php echo htmlspecialchars($name ?? '—'); ?></td>
-                <td><?php echo date("F d, Y", strtotime($r['date'])); ?></td>
+                <td><?php echo htmlspecialchars($name); ?></td>
+                <td><?php echo isset($r['date']) ? date("F d, Y", strtotime($r['date'])) : '—'; ?></td>
                 <td><?php echo htmlspecialchars($r['time_slot'] ?? '—'); ?></td>
                 <td>
                     <span style="padding:4px 10px; border-radius:12px; font-size:.85rem; <?php echo $badge; ?>">
@@ -71,7 +67,7 @@ $reservations = $stmt->get_result();
                     </span>
                 </td>
             </tr>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
         </tbody>
     </table>
 

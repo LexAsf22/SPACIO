@@ -1,4 +1,5 @@
 <?php
+// frontend/admin/maintenance.php
 include("../includes/header.php");
 checkRole('admin');
 
@@ -6,29 +7,35 @@ checkRole('admin');
 $allowed_statuses = ['In Progress', 'Done'];
 
 if (isset($_GET['status'], $_GET['id'])) {
-    $id     = (int) $_GET['id'];
-    $status = $_GET['status'];
+    $id     = (int)    $_GET['id'];
+    $status =           $_GET['status'];
 
     if (!in_array($status, $allowed_statuses, true)) {
         setFlash("Invalid status value.", "error");
     } else {
-        $stmt = $conn->prepare("UPDATE issues SET status = ? WHERE id = ?");
-        $stmt->bind_param("si", $status, $id);
-        $stmt->execute();
-        setFlash("Issue status updated!", "success");
+        $result = djangoPost('/api/v1/issues/' . $id . '/status/', [
+            'status' => $status,
+        ]);
+
+        if ($result['success']) {
+            setFlash("Issue status updated!", "success");
+        } else {
+            $msg = $result['data']['detail'] ?? $result['data']['message'] ?? 'Update failed.';
+            setFlash($msg, "error");
+        }
     }
 
     header("Location: " . $_SERVER['PHP_SELF']);
     exit;
 }
 
-// ── Fetch issues ──────────────────────────────────────────────────────────────
-$issues = $conn->query("
-    SELECT i.*, u.name AS teacher_name
-    FROM   issues i
-    JOIN   users u ON i.user_id = u.id
-    ORDER  BY i.created_at DESC
-");
+// ── Fetch issues from Django ──────────────────────────────────────────────────
+$result = djangoGet('/api/v1/issues/');
+$issues = [];
+
+if ($result['success'] && isset($result['data'])) {
+    $issues = $result['data']['results'] ?? $result['data'] ?? [];
+}
 ?>
 
 <style>
@@ -89,7 +96,7 @@ $issues = $conn->query("
     </select>
 </div>
 
-<?php if ($issues->num_rows === 0): ?>
+<?php if (empty($issues)): ?>
     <div style="
         background:#d4edda; color:#155724;
         border:1px solid #c3e6cb;
@@ -112,15 +119,15 @@ $issues = $conn->query("
         </tr>
     </thead>
     <tbody>
-    <?php while ($i = $issues->fetch_assoc()):
-        $badge = match($i['status']) {
+    <?php foreach ($issues as $i):
+        $badge = match($i['status'] ?? 'Pending') {
             'Pending'     => 'badge-yellow',
             'In Progress' => 'badge-blue',
             'Done'        => 'badge-green',
             default       => 'badge-yellow',
         };
 
-        $pclass = match($i['priority']) {
+        $pclass = match($i['priority'] ?? '') {
             'High'   => 'priority-high',
             'Medium' => 'priority-medium',
             'Low'    => 'priority-low',
@@ -132,20 +139,20 @@ $issues = $conn->query("
     ?>
     <tr>
         <td>
-            <?php echo htmlspecialchars($i['teacher_name']); ?>
+            <?php echo htmlspecialchars($i['teacher_name'] ?? '—'); ?>
             <div style="font-size:.76rem; color:#999; margin-top:2px;">
-                <?php echo date("M d, Y", strtotime($i['created_at'])); ?>
+                <?php echo isset($i['created_at']) ? date("M d, Y", strtotime($i['created_at'])) : '—'; ?>
             </div>
         </td>
 
         <td>
-            <?php echo htmlspecialchars($i['campus']); ?>
+            <?php echo htmlspecialchars($i['campus'] ?? '—'); ?>
             <div style="font-size:.8rem; color:#666; margin-top:2px;">
-                Room: <?php echo htmlspecialchars($i['room']); ?>
+                Room: <?php echo htmlspecialchars($i['room'] ?? '—'); ?>
             </div>
         </td>
 
-        <td><?php echo htmlspecialchars($i['category']); ?></td>
+        <td><?php echo htmlspecialchars($i['category'] ?? '—'); ?></td>
 
         <td style="max-width:220px;">
             <?php if (!empty($i['description'])): ?>
@@ -159,21 +166,21 @@ $issues = $conn->query("
 
         <td>
             <span class="<?php echo $pclass; ?>">
-                <?php echo htmlspecialchars($i['priority']); ?>
+                <?php echo htmlspecialchars($i['priority'] ?? '—'); ?>
             </span>
         </td>
 
         <td>
             <span class="badge <?php echo $badge; ?>">
-                <?php echo htmlspecialchars($i['status']); ?>
+                <?php echo htmlspecialchars($i['status'] ?? 'Pending'); ?>
             </span>
         </td>
 
         <td>
-            <?php if ($i['status'] === 'Done'): ?>
+            <?php if (($i['status'] ?? '') === 'Done'): ?>
                 <span class="btn-resolved">✓ Resolved</span>
 
-            <?php elseif ($i['status'] === 'In Progress'): ?>
+            <?php elseif (($i['status'] ?? '') === 'In Progress'): ?>
                 <a href="<?php echo $url_done; ?>" class="btn-done statusBtn">
                     Mark Done
                 </a>
@@ -189,7 +196,7 @@ $issues = $conn->query("
             <?php endif; ?>
         </td>
     </tr>
-    <?php endwhile; ?>
+    <?php endforeach; ?>
     </tbody>
 </table>
 
@@ -225,8 +232,8 @@ function applyFilters() {
     });
 }
 
-searchInput.addEventListener('keyup', applyFilters);
-filterStatus.addEventListener('change', applyFilters);
+searchInput.addEventListener('keyup',    applyFilters);
+filterStatus.addEventListener('change',  applyFilters);
 filterPriority.addEventListener('change', applyFilters);
 </script>
 

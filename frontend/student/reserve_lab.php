@@ -1,42 +1,58 @@
 <?php
+// frontend/student/reserve_lab.php
 include("../includes/header.php");
 checkRole('student');
 
+$user_id = (int) $_SESSION['user']['id'];
+
+// ── Handle reservation form submission ────────────────────────────────────────
 if (isset($_POST['reserve'])) {
-    $lab_id    = (int) $_POST['lab'];
-    $date      = $_POST['date'];
-    $time_slot = $_POST['time_slot'];
-    $user_id   = (int) $_SESSION['user']['id'];
+    $lab_id    = (int)   $_POST['lab'];
+    $date      =  trim(  $_POST['date']      ?? '');
+    $time_slot =  trim(  $_POST['time_slot'] ?? '');
 
     if ($date < date('Y-m-d')) {
         setFlash("Please select a future date.", "error");
     } else {
-        $check = $conn->prepare("
-            SELECT id FROM reservations 
-            WHERE lab_id = ? AND date = ? AND time_slot = ? AND status != 'Rejected'
-        ");
-        $check->bind_param("iss", $lab_id, $date, $time_slot);
-        $check->execute();
-        $check->store_result();
+        $result = djangoPost('/api/v1/reservations/', [
+            'user_id'   => $user_id,
+            'lab_id'    => $lab_id,
+            'date'      => $date,
+            'time_slot' => $time_slot,
+            'type'      => 'lab',
+        ]);
 
-        if ($check->num_rows > 0) {
-            setFlash("That slot is already booked. Please choose another.", "error");
+        if ($result['success']) {
+            setFlash("Reservation submitted! Waiting for admin approval.", "success");
         } else {
-            $stmt = $conn->prepare("
-                INSERT INTO reservations (user_id, lab_id, date, time_slot, status) 
-                VALUES (?, ?, ?, ?, 'Pending')
-            ");
-            $stmt->bind_param("iiss", $user_id, $lab_id, $date, $time_slot);
-            if ($stmt->execute()) {
-                setFlash("Reservation submitted! Waiting for admin approval.", "success");
-            } else {
-                setFlash("Something went wrong. Please try again.", "error");
-            }
+            $msg = $result['data']['detail']
+                ?? $result['data']['message']
+                ?? "Something went wrong. Please try again.";
+            setFlash($msg, "error");
         }
     }
 
     header("Location: " . $_SERVER['PHP_SELF']);
     exit;
+}
+
+// ── Fetch labs for dropdown ───────────────────────────────────────────────────
+$labsResult = djangoGet('/api/v1/labs/');
+$labs_by_campus = [];
+
+if ($labsResult['success'] && isset($labsResult['data'])) {
+    foreach ($labsResult['data'] as $lab) {
+        $campus = $lab['campus'] ?? 'Other';
+        $labs_by_campus[$campus][] = $lab;
+    }
+}
+
+// ── Fetch student's recent lab reservations ───────────────────────────────────
+$recentResult   = djangoGet('/api/v1/reservations/my/?type=lab&limit=5&user_id=' . $user_id);
+$recent_rows    = [];
+
+if ($recentResult['success'] && isset($recentResult['data'])) {
+    $recent_rows = $recentResult['data']['results'] ?? $recentResult['data'] ?? [];
 }
 ?>
 
@@ -52,24 +68,16 @@ if (isset($_POST['reserve'])) {
             </label>
             <select name="lab" required style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;">
                 <option value="">-- Choose a Lab --</option>
-                <?php
-                $campuses = ['Campus A', 'Campus B'];
-                foreach ($campuses as $campus):
-                    $labs = $conn->query("
-                        SELECT * FROM laboratories 
-                        WHERE campus = '$campus' 
-                        ORDER BY lab_name
-                    ");
-                ?>
-                    <optgroup label="── <?php echo $campus; ?> ──">
-                        <?php while ($lab = $labs->fetch_assoc()): ?>
-                            <option value="<?php echo $lab['id']; ?>">
-                                <?php echo htmlspecialchars($lab['lab_name']); ?>
-                                <?php echo $lab['total_computers'] > 0
-                                    ? ' (' . $lab['total_computers'] . ' computers)'
+                <?php foreach ($labs_by_campus as $campus => $labs): ?>
+                    <optgroup label="── <?php echo htmlspecialchars($campus); ?> ──">
+                        <?php foreach ($labs as $lab): ?>
+                            <option value="<?php echo (int) $lab['id']; ?>">
+                                <?php echo htmlspecialchars($lab['lab_name'] ?? $lab['name'] ?? ''); ?>
+                                <?php echo !empty($lab['total_computers'])
+                                    ? ' (' . (int) $lab['total_computers'] . ' computers)'
                                     : ''; ?>
                             </option>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     </optgroup>
                 <?php endforeach; ?>
             </select>
@@ -102,13 +110,10 @@ if (isset($_POST['reserve'])) {
             </select>
         </div>
 
-        <!-- Availability checker display -->
+        <!-- Live availability checker display -->
         <div id="availabilityMsg" style="
-            display:none;
-            padding:10px 14px;
-            border-radius:5px;
-            margin-bottom:16px;
-            font-size:.9rem;
+            display:none; padding:10px 14px;
+            border-radius:5px; margin-bottom:16px; font-size:.9rem;
         "></div>
 
         <button
@@ -130,26 +135,11 @@ if (isset($_POST['reserve'])) {
     </form>
 </div>
 
-<!-- Recent reservations for this student -->
+<!-- Recent lab reservations -->
 <div style="margin-top:36px;">
     <h3 style="margin-bottom:12px;">Your Recent Lab Reservations</h3>
 
-    <?php
-    $user_id = (int) $_SESSION['user']['id'];
-    $recent  = $conn->prepare("
-        SELECT r.*, l.lab_name
-        FROM   reservations r
-        JOIN   laboratories l ON r.lab_id = l.id
-        WHERE  r.user_id = ? AND r.lab_id IS NOT NULL
-        ORDER  BY r.created_at DESC
-        LIMIT  5
-    ");
-    $recent->bind_param("i", $user_id);
-    $recent->execute();
-    $recent_result = $recent->get_result();
-    ?>
-
-    <?php if ($recent_result->num_rows === 0): ?>
+    <?php if (empty($recent_rows)): ?>
         <p style="color:#888; font-style:italic;">No lab reservations yet.</p>
     <?php else: ?>
         <table border="1" cellpadding="10" cellspacing="0"
@@ -163,8 +153,8 @@ if (isset($_POST['reserve'])) {
                 </tr>
             </thead>
             <tbody>
-            <?php while ($r = $recent_result->fetch_assoc()):
-                $status = $r['status'];
+            <?php foreach ($recent_rows as $r):
+                $status = $r['status'] ?? 'Pending';
                 $badge  = match($status) {
                     'Approved' => 'background:#d4edda; color:#155724;',
                     'Rejected' => 'background:#f8d7da; color:#721c24;',
@@ -172,27 +162,27 @@ if (isset($_POST['reserve'])) {
                 };
             ?>
                 <tr>
-                    <td><?php echo htmlspecialchars($r['lab_name']); ?></td>
-                    <td><?php echo date("F d, Y", strtotime($r['date'])); ?></td>
-                    <td><?php echo htmlspecialchars($r['time_slot']); ?></td>
+                    <td><?php echo htmlspecialchars($r['lab_name'] ?? '—'); ?></td>
+                    <td><?php echo isset($r['date']) ? date("F d, Y", strtotime($r['date'])) : '—'; ?></td>
+                    <td><?php echo htmlspecialchars($r['time_slot'] ?? '—'); ?></td>
                     <td>
                         <span style="padding:3px 10px; border-radius:12px; font-size:.82rem; <?php echo $badge; ?>">
                             <?php echo htmlspecialchars($status); ?>
                         </span>
                     </td>
                 </tr>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
             </tbody>
         </table>
     <?php endif; ?>
 </div>
 
 <script>
-document.getElementById('reserveLabForm').addEventListener('submit', function(e) {
+document.getElementById('reserveLabForm').addEventListener('submit', function (e) {
     if (!confirm("Submit this lab reservation request?")) e.preventDefault();
 });
 
-// Live availability check when lab + date + time are all selected
+// ── Live availability check ───────────────────────────────────────────────────
 const labSelect  = document.querySelector('select[name="lab"]');
 const dateInput  = document.querySelector('input[name="date"]');
 const slotSelect = document.querySelector('select[name="time_slot"]');
@@ -227,8 +217,8 @@ function checkAvailability() {
         .catch(() => { msg.style.display = 'none'; });
 }
 
-labSelect.addEventListener('change', checkAvailability);
-dateInput.addEventListener('change', checkAvailability);
+labSelect.addEventListener('change',  checkAvailability);
+dateInput.addEventListener('change',  checkAvailability);
 slotSelect.addEventListener('change', checkAvailability);
 </script>
 

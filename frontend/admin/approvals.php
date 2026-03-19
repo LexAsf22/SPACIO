@@ -1,48 +1,52 @@
 <?php
+// frontend/admin/approvals.php
 include("../includes/header.php");
 checkRole('admin');
 
-// Approve
+// ── Approve ───────────────────────────────────────────────────────────────────
 if (isset($_GET['approve'])) {
-    $id   = (int) $_GET['approve'];
-    $stmt = $conn->prepare("UPDATE reservations SET status='Approved' WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    setFlash("Reservation approved successfully!", "success");
+    $id     = (int) $_GET['approve'];
+    $result = djangoPost('/api/v1/admin/approvals/' . $id . '/', ['action' => 'approve']);
+
+    if ($result['success']) {
+        setFlash("Reservation approved successfully!", "success");
+    } else {
+        $msg = $result['data']['detail'] ?? $result['data']['message'] ?? 'Approval failed. Please try again.';
+        setFlash($msg, "error");
+    }
+
     header("Location: " . $_SERVER['PHP_SELF']);
     exit;
 }
 
-// Reject
+// ── Reject ────────────────────────────────────────────────────────────────────
 if (isset($_GET['reject'])) {
-    $id   = (int) $_GET['reject'];
-    $stmt = $conn->prepare("UPDATE reservations SET status='Rejected' WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    setFlash("Reservation rejected.", "error");
+    $id     = (int) $_GET['reject'];
+    $result = djangoPost('/api/v1/admin/approvals/' . $id . '/', ['action' => 'reject']);
+
+    if ($result['success']) {
+        setFlash("Reservation rejected.", "error");
+    } else {
+        $msg = $result['data']['detail'] ?? $result['data']['message'] ?? 'Rejection failed. Please try again.';
+        setFlash($msg, "error");
+    }
+
     header("Location: " . $_SERVER['PHP_SELF']);
     exit;
 }
 
-// Fetch all pending — LEFT JOIN equipment too
-$reservations = $conn->query("
-    SELECT 
-        r.*,
-        u.name        AS student_name,
-        l.lab_name,
-        e.equipment_name
-    FROM reservations r
-    JOIN users u ON r.user_id = u.id
-    LEFT JOIN laboratories l ON r.lab_id       = l.id
-    LEFT JOIN equipment    e ON r.equipment_id  = e.id
-    WHERE r.status = 'Pending'
-    ORDER BY r.date ASC, r.time_slot ASC
-");
+// ── Fetch pending reservations from Django ────────────────────────────────────
+$result       = djangoGet('/api/v1/admin/approvals/');
+$reservations = [];
 
-$pending_count = $reservations->num_rows;
+if ($result['success'] && isset($result['data'])) {
+    $reservations = $result['data'];
+}
+
+$pending_count = count($reservations);
 ?>
 
-<h2>Pending Reservations 
+<h2>Pending Reservations
     <span style="
         background:#f39c12; color:white;
         padding:3px 10px; border-radius:12px;
@@ -64,10 +68,10 @@ $pending_count = $reservations->num_rows;
     </div>
 <?php else: ?>
 
-    <input 
-        type="text" 
-        id="searchInput" 
-        placeholder="Search by student, lab, or equipment..." 
+    <input
+        type="text"
+        id="searchInput"
+        placeholder="Search by student, lab, or equipment..."
         style="padding:10px; margin:10px 0; width:50%; border:1px solid #ccc; border-radius:5px;"
     >
 
@@ -85,21 +89,23 @@ $pending_count = $reservations->num_rows;
             </tr>
         </thead>
         <tbody>
-        <?php while ($row = $reservations->fetch_assoc()):
+        <?php foreach ($reservations as $row):
             $isLab = !empty($row['lab_id']);
             $type  = $isLab ? 'Lab' : 'Equipment';
-            $name  = $isLab ? $row['lab_name'] : $row['equipment_name'];
+            $name  = $isLab
+                ? ($row['lab_name']       ?? '—')
+                : ($row['equipment_name'] ?? '—');
         ?>
             <tr>
-                <td><?php echo $row['id']; ?></td>
-                <td><?php echo htmlspecialchars($row['student_name']); ?></td>
+                <td><?php echo (int) $row['id']; ?></td>
+                <td><?php echo htmlspecialchars($row['student_name'] ?? '—'); ?></td>
                 <td><?php echo $type; ?></td>
-                <td><?php echo htmlspecialchars($name ?? '—'); ?></td>
-                <td><?php echo date("F d, Y", strtotime($row['date'])); ?></td>
+                <td><?php echo htmlspecialchars($name); ?></td>
+                <td><?php echo date("F d, Y", strtotime($row['date'] ?? 'now')); ?></td>
                 <td><?php echo htmlspecialchars($row['time_slot'] ?? '—'); ?></td>
                 <td style="white-space:nowrap;">
-                    <a 
-                        href="?approve=<?php echo $row['id']; ?>" 
+                    <a
+                        href="?approve=<?php echo (int) $row['id']; ?>"
                         class="approveBtn"
                         style="
                             background:#28a745; color:white;
@@ -108,8 +114,8 @@ $pending_count = $reservations->num_rows;
                             margin-right:6px;
                         "
                     >✓ Approve</a>
-                    <a 
-                        href="?reject=<?php echo $row['id']; ?>" 
+                    <a
+                        href="?reject=<?php echo (int) $row['id']; ?>"
                         class="rejectBtn"
                         style="
                             background:#e74c3c; color:white;
@@ -119,7 +125,7 @@ $pending_count = $reservations->num_rows;
                     >✗ Reject</a>
                 </td>
             </tr>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
         </tbody>
     </table>
 

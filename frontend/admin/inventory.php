@@ -1,33 +1,49 @@
 <?php
+// frontend/admin/inventory.php
 include("../includes/header.php");
 checkRole('admin');
 
+// ── Add equipment ─────────────────────────────────────────────────────────────
 if (isset($_POST['add'])) {
     $lab_id = (int)  $_POST['lab'];
     $name   = trim(  $_POST['equipment_name'] ?? '');
     $qty    = (int)  $_POST['quantity'];
 
-    if ($name === '' || $lab_id === 0 || $qty < 0) {
+    if ($name === '' || $lab_id === 0 || $qty < 1) {
         setFlash("Please fill in all fields correctly.", "error");
     } else {
-        $stmt = $conn->prepare("
-            INSERT INTO equipment (equipment_name, lab_id, quantity, status)
-            VALUES (?, ?, ?, 'Available')
-        ");
-        $stmt->bind_param("sii", $name, $lab_id, $qty);
-        $stmt->execute();
-        setFlash("Equipment added successfully!", "success");
+        $result = djangoPost('/api/v1/admin/inventory/', [
+            'equipment_name' => $name,
+            'lab_id'         => $lab_id,
+            'quantity'       => $qty,
+            'status'         => 'Available',
+        ]);
+
+        if ($result['success']) {
+            setFlash("Equipment added successfully!", "success");
+        } else {
+            $msg = $result['data']['detail'] ?? $result['data']['message'] ?? 'Failed to add equipment.';
+            setFlash($msg, "error");
+        }
     }
     header("Location: " . $_SERVER['PHP_SELF']);
     exit;
 }
 
+// ── Delete equipment ──────────────────────────────────────────────────────────
 if (isset($_GET['delete'])) {
-    $id   = (int) $_GET['delete'];
-    $stmt = $conn->prepare("DELETE FROM equipment WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    setFlash("Equipment deleted.", "error");
+    $id     = (int) $_GET['delete'];
+    $result = djangoPut('/api/v1/admin/inventory/' . $id . '/', ['deleted' => true]);
+
+    // Note: use djangoPost with a DELETE method wrapper if your Django endpoint uses DELETE.
+    // For now this sends a soft-delete flag. Adjust to match your Django endpoint design.
+    if ($result['success']) {
+        setFlash("Equipment deleted.", "error");
+    } else {
+        $msg = $result['data']['detail'] ?? $result['data']['message'] ?? 'Delete failed.';
+        setFlash($msg, "error");
+    }
+
     $qs = http_build_query([
         'page'       => $_GET['page']       ?? 1,
         'search'     => $_GET['search']     ?? '',
@@ -37,58 +53,40 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-$per_page    = 10;
-$page        = max(1, (int) ($_GET['page']       ?? 1));
-$search      = trim(         $_GET['search']     ?? '');
-$filter_lab  = (int)         ($_GET['lab_filter'] ?? 0);
-$search_like = '%' . $search . '%';
+// ── Fetch equipment list from Django ──────────────────────────────────────────
+$per_page   = 10;
+$page       = max(1, (int) ($_GET['page']       ?? 1));
+$search     = trim(         $_GET['search']     ?? '');
+$filter_lab = (int)         ($_GET['lab_filter'] ?? 0);
 
-$where  = "WHERE 1=1";
-$params = [];
-$types  = "";
+$endpoint = '/api/v1/admin/inventory/'
+    . '?page='       . $page
+    . '&search='     . urlencode($search)
+    . '&lab_filter=' . $filter_lab
+    . '&per_page='   . $per_page;
 
-if ($search !== '') {
-    $where   .= " AND (e.equipment_name LIKE ? OR l.lab_name LIKE ? OR e.status LIKE ?)";
-    $params[] = $search_like;
-    $params[] = $search_like;
-    $params[] = $search_like;
-    $types   .= "sss";
+$result    = djangoGet($endpoint);
+$equipment = [];
+$total_rows  = 0;
+$total_pages = 1;
+
+if ($result['success'] && isset($result['data'])) {
+    $equipment   = $result['data']['results']     ?? $result['data'] ?? [];
+    $total_rows  = $result['data']['count']        ?? count($equipment);
+    $total_pages = $result['data']['total_pages']  ?? max(1, ceil($total_rows / $per_page));
 }
-if ($filter_lab > 0) {
-    $where   .= " AND e.lab_id = ?";
-    $params[] = $filter_lab;
-    $types   .= "i";
-}
 
-$count_stmt = $conn->prepare("
-    SELECT COUNT(*) AS total 
-    FROM equipment e 
-    JOIN laboratories l ON e.lab_id = l.id 
-    $where
-");
-if ($types !== '') $count_stmt->bind_param($types, ...$params);
-$count_stmt->execute();
-$total_rows  = $count_stmt->get_result()->fetch_assoc()['total'];
-$total_pages = max(1, ceil($total_rows / $per_page));
-$page        = min($page, $total_pages);
-$offset      = ($page - 1) * $per_page;
+$page   = min($page, $total_pages);
+$offset = ($page - 1) * $per_page;
 
-$data_stmt = $conn->prepare("
-    SELECT e.*, l.lab_name
-    FROM   equipment e
-    JOIN   laboratories l ON e.lab_id = l.id
-    $where
-    ORDER  BY l.lab_name, e.equipment_name
-    LIMIT  ? OFFSET ?
-");
-$data_stmt->bind_param($types . "ii", ...array_merge($params, [$per_page, $offset]));
-$data_stmt->execute();
-$equipment = $data_stmt->get_result();
-
-$labs = $conn->query("SELECT * FROM laboratories ORDER BY campus, lab_name");
+// ── Fetch labs for the Add form dropdown ──────────────────────────────────────
+$labsResult = djangoGet('/api/v1/labs/');
+$labs       = ($labsResult['success'] && isset($labsResult['data']))
+    ? $labsResult['data']
+    : [];
 
 function pageUrl(int $p): string {
-    $q = $_GET;
+    $q         = $_GET;
     $q['page'] = $p;
     unset($q['delete']);
     return '?' . http_build_query($q);
@@ -128,21 +126,11 @@ function pageUrl(int $p): string {
     .btn-delete          { display:inline-block; padding:3px 9px; background:#e74c3c; color:#fff; border-radius:3px; text-decoration:none; font-size:.76rem; }
     .btn-delete:hover    { background:#c0392b; color:#fff; }
 
-    /* Pagination */
     .pagination          { display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-top:4px; }
     .pagination a        { padding:5px 10px; border:1px solid #ccc; border-radius:4px; text-decoration:none; color:#333; font-size:.82rem; }
     .pagination a:hover  { background:#f0f0f0; }
     .pagination a.active { background:#2c5f2e; color:#fff; border-color:#2c5f2e; font-weight:700; }
-    /* Disabled arrow style */
-    .pagination .pg-disabled {
-        padding:5px 10px;
-        border:1px solid #eee;
-        border-radius:4px;
-        color:#ccc;
-        font-size:.82rem;
-        cursor:default;
-        user-select:none;
-    }
+    .pagination .pg-disabled { padding:5px 10px; border:1px solid #eee; border-radius:4px; color:#ccc; font-size:.82rem; cursor:default; user-select:none; }
     .pg-info             { font-size:.8rem; color:#777; margin-left:4px; }
 </style>
 
@@ -160,20 +148,11 @@ function pageUrl(int $p): string {
                 <label>Lab</label>
                 <select name="lab" required>
                     <option value="">-- Select Lab --</option>
-                    <?php
-                    $cg = '';
-                    while ($lab = $labs->fetch_assoc()):
-                        if ($lab['campus'] !== $cg):
-                            if ($cg !== '') echo '</optgroup>';
-                            $cg = $lab['campus'];
-                            echo '<optgroup label="' . htmlspecialchars($cg) . '">';
-                        endif;
-                    ?>
-                        <option value="<?php echo $lab['id']; ?>">
-                            <?php echo htmlspecialchars($lab['lab_name']); ?>
+                    <?php foreach ($labs as $lab): ?>
+                        <option value="<?php echo (int) $lab['id']; ?>">
+                            <?php echo htmlspecialchars($lab['lab_name'] ?? $lab['name'] ?? ''); ?>
                         </option>
-                    <?php endwhile;
-                    if ($cg !== '') echo '</optgroup>'; ?>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="inv-field">
@@ -201,29 +180,20 @@ function pageUrl(int $p): string {
     >
     <select name="lab_filter">
         <option value="">All Labs</option>
-        <?php
-        $labs2 = $conn->query("SELECT * FROM laboratories ORDER BY campus, lab_name");
-        $cg2   = '';
-        while ($lab = $labs2->fetch_assoc()):
-            if ($lab['campus'] !== $cg2):
-                if ($cg2 !== '') echo '</optgroup>';
-                $cg2 = $lab['campus'];
-                echo '<optgroup label="' . htmlspecialchars($cg2) . '">';
-            endif;
-            $sel = ($filter_lab === (int)$lab['id']) ? 'selected' : '';
+        <?php foreach ($labs as $lab):
+            $sel = ($filter_lab === (int) $lab['id']) ? 'selected' : '';
         ?>
-            <option value="<?php echo $lab['id']; ?>" <?php echo $sel; ?>>
-                <?php echo htmlspecialchars($lab['lab_name']); ?>
+            <option value="<?php echo (int) $lab['id']; ?>" <?php echo $sel; ?>>
+                <?php echo htmlspecialchars($lab['lab_name'] ?? $lab['name'] ?? ''); ?>
             </option>
-        <?php endwhile;
-        if ($cg2 !== '') echo '</optgroup>'; ?>
+        <?php endforeach; ?>
     </select>
     <button type="submit" class="btn-search">Search</button>
     <?php if ($search !== '' || $filter_lab > 0): ?>
         <a href="?" class="btn-clear">✕ Clear</a>
     <?php endif; ?>
     <span class="summary">
-        Showing <?php echo min($offset+1, $total_rows); ?>–<?php echo min($offset+$per_page, $total_rows); ?>
+        Showing <?php echo min($offset + 1, $total_rows); ?>–<?php echo min($offset + $per_page, $total_rows); ?>
         of <?php echo $total_rows; ?> items
     </span>
 </form>
@@ -241,7 +211,7 @@ function pageUrl(int $p): string {
         </tr>
     </thead>
     <tbody>
-    <?php if ($equipment->num_rows === 0): ?>
+    <?php if (empty($equipment)): ?>
         <tr>
             <td colspan="6" style="text-align:center; color:#888; padding:18px; font-style:italic;">
                 <?php echo $search !== '' ? 'No results found.' : 'No equipment on record.'; ?>
@@ -250,7 +220,7 @@ function pageUrl(int $p): string {
     <?php else: ?>
         <?php
         $n = $offset + 1;
-        while ($e = $equipment->fetch_assoc()):
+        foreach ($equipment as $e):
             $status = $e['status'] ?? 'Available';
             $badge  = match($status) {
                 'Available'         => 'badge-green',
@@ -268,8 +238,8 @@ function pageUrl(int $p): string {
         <tr>
             <td style="text-align:center; color:#aaa;"><?php echo $n++; ?></td>
             <td><?php echo htmlspecialchars($e['equipment_name']); ?></td>
-            <td><?php echo htmlspecialchars($e['lab_name']);       ?></td>
-            <td style="text-align:center;"><?php echo (int)$e['quantity']; ?></td>
+            <td><?php echo htmlspecialchars($e['lab_name'] ?? '—'); ?></td>
+            <td style="text-align:center;"><?php echo (int) $e['quantity']; ?></td>
             <td style="text-align:center;">
                 <span class="badge <?php echo $badge; ?>">
                     <?php echo htmlspecialchars($status); ?>
@@ -279,15 +249,13 @@ function pageUrl(int $p): string {
                 <a href="<?php echo $delete_url; ?>" class="btn-delete deleteBtn">Delete</a>
             </td>
         </tr>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     <?php endif; ?>
     </tbody>
 </table>
 
 <!-- PAGINATION -->
 <div class="pagination">
-
-    <!-- First & Prev — disabled on page 1 -->
     <?php if ($page > 1): ?>
         <a href="<?php echo pageUrl(1); ?>">«</a>
         <a href="<?php echo pageUrl($page - 1); ?>">‹</a>
@@ -296,14 +264,12 @@ function pageUrl(int $p): string {
         <span class="pg-disabled">‹</span>
     <?php endif; ?>
 
-    <!-- Page numbers -->
     <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
         <a href="<?php echo pageUrl($i); ?>" <?php echo $i === $page ? 'class="active"' : ''; ?>>
             <?php echo $i; ?>
         </a>
     <?php endfor; ?>
 
-    <!-- Next & Last — disabled on last page -->
     <?php if ($page < $total_pages): ?>
         <a href="<?php echo pageUrl($page + 1); ?>">›</a>
         <a href="<?php echo pageUrl($total_pages); ?>">»</a>
@@ -313,7 +279,6 @@ function pageUrl(int $p): string {
     <?php endif; ?>
 
     <span class="pg-info">Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
-
 </div>
 
 </div>

@@ -1,18 +1,11 @@
 <?php
-session_start();
-include("backend/config/database.php");
+// register.php (root)
+require_once "backend/config/database.php";
+require_once "backend/config/helpers.php";
+require_once "backend/config/auth.php";
 
 // Redirect already-logged-in users
-if (isset($_SESSION['user'])) {
-    $role = $_SESSION['user']['role'];
-    $dashboards = [
-        'student' => 'frontend/student/dashboard.php',
-        'teacher' => 'frontend/teacher/dashboard.php',
-        'admin'   => 'frontend/admin/dashboard.php',
-    ];
-    header("Location: " . ($dashboards[$role] ?? 'index.php'));
-    exit;
-}
+redirectIfLoggedIn();
 
 $errorFields = [];
 $success     = null;
@@ -28,53 +21,68 @@ if (isset($_POST['register'])) {
     $course     = trim($_POST['course']     ?? '');
     $department = trim($_POST['department'] ?? '');
 
-    // ── Validation ──
-    if (empty($name))       $errorFields['name']      = "Full name is required.";
-    if (empty($school_id))  $errorFields['school_id'] = "Student / Teacher ID is required.";
+    // ── Client-side validation (keep this — catches errors before hitting Django) ──
+    if (empty($name))                                       $errorFields['name']      = "Full name is required.";
+    if (empty($school_id))                                  $errorFields['school_id'] = "Student / Teacher ID is required.";
+    if (empty($email))                                      $errorFields['email']     = "Email address is required.";
+    elseif (!filter_var($email, FILTER_VALIDATE_EMAIL))     $errorFields['email']     = "Please enter a valid email address.";
+    if (empty($password))                                   $errorFields['password']  = "Password is required.";
+    elseif (strlen($password) < 8)                         $errorFields['password']  = "Password must be at least 8 characters.";
+    if (empty($role))                                       $errorFields['role']      = "Please select a role.";
+    if (empty($campus))                                     $errorFields['campus']    = "Campus is required.";
+    if ($role === 'student' && empty($course))              $errorFields['course']    = "Course is required for students.";
+    if ($role === 'teacher' && empty($department))          $errorFields['department']= "Department is required for teachers.";
 
-    if (empty($email))                                    $errorFields['email'] = "Email address is required.";
-    elseif (!filter_var($email, FILTER_VALIDATE_EMAIL))   $errorFields['email'] = "Please enter a valid email address.";
-
-    if (empty($password))           $errorFields['password'] = "Password is required.";
-    elseif (strlen($password) < 8)  $errorFields['password'] = "Password must be at least 8 characters.";
-
-    if (empty($role))    $errorFields['role']   = "Please select a role.";
-    if (empty($campus))  $errorFields['campus'] = "Campus is required.";
-
-    if ($role === 'student' && empty($course))     $errorFields['course']     = "Course is required for students.";
-    if ($role === 'teacher' && empty($department)) $errorFields['department'] = "Department is required for teachers.";
-
-    // ── Insert ──
+    // ── Call Django register API if validation passes ──
     if (empty($errorFields)) {
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? OR school_id = ?");
-        $stmt->bind_param("ss", $email, $school_id);
-        $stmt->execute();
-        $stmt->get_result()->num_rows > 0
-            ? $errorFields['email'] = "An account with that email or ID already exists."
-            : null;
 
-        if (empty($errorFields)) {
-            $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt   = $conn->prepare("INSERT INTO users (name, school_id, email, password, role, campus, course, department) VALUES (?,?,?,?,?,?,?,?)");
-            $stmt->bind_param("ssssssss", $name, $school_id, $email, $hashed, $role, $campus, $course, $department);
+        $result = djangoPost('/api/v1/auth/register/', [
+            'name'       => $name,
+            'school_id'  => $school_id,
+            'email'      => $email,
+            'password'   => $password,
+            'role'       => $role,
+            'campus'     => $campus,
+            'course'     => $course,
+            'department' => $department,
+        ]);
 
-            if ($stmt->execute()) {
-                $success = true;
-                $old = ['name'=>'','school_id'=>'','email'=>'','role'=>'','campus'=>'','course'=>'','department'=>''];
-            } else {
-                $errorFields['general'] = "Registration failed. Please try again.";
+        if ($result['success']) {
+            $success = true;
+            // Clear form values on success
+            $old = ['name'=>'','school_id'=>'','email'=>'','role'=>'','campus'=>'','course'=>'','department'=>''];
+
+        } else {
+            // Map Django field errors back to PHP $errorFields
+            $data = $result['data'] ?? [];
+
+            // Django REST Framework returns field errors as arrays e.g. {"email": ["already exists"]}
+            $fieldMap = ['name','school_id','email','password','role','campus','course','department'];
+            foreach ($fieldMap as $field) {
+                if (!empty($data[$field])) {
+                    $errorFields[$field] = is_array($data[$field])
+                        ? implode(' ', $data[$field])
+                        : $data[$field];
+                }
+            }
+
+            // Catch non-field errors
+            if (empty($errorFields)) {
+                $errorFields['general'] = $data['detail']
+                    ?? $data['message']
+                    ?? "Registration failed. Please try again.";
             }
         }
     }
 }
 
-// Retain old values on error
+// Retain old form values on error
 if (!isset($old)) {
     $old = [
         'name'       => htmlspecialchars($_POST['name']       ?? ''),
         'school_id'  => htmlspecialchars($_POST['school_id']  ?? ''),
         'email'      => htmlspecialchars($_POST['email']      ?? ''),
-        'role'       => $_POST['role']   ?? '',
+        'role'       =>                  $_POST['role']       ?? '',
         'campus'     => htmlspecialchars($_POST['campus']     ?? ''),
         'course'     => htmlspecialchars($_POST['course']     ?? ''),
         'department' => htmlspecialchars($_POST['department'] ?? ''),
@@ -122,7 +130,6 @@ function fieldClass(array $err, string $key): string {
             overflow-x: hidden;
         }
 
-        /* ── Background ── */
         .page-bg {
             position: fixed; inset: 0; z-index: 0; pointer-events: none;
             background:
@@ -138,7 +145,6 @@ function fieldClass(array $err, string $key): string {
             mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black 20%, transparent 100%);
         }
 
-        /* ── Layout ── */
         .page-wrap {
             position: relative; z-index: 1;
             flex: 1;
@@ -231,17 +237,10 @@ function fieldClass(array $err, string $key): string {
             max-width: 340px; margin-bottom: 48px;
         }
 
-        /* Steps */
-        .steps {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-        }
+        .steps { display: flex; flex-direction: column; gap: 0; }
 
         .step {
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
+            display: flex; align-items: flex-start; gap: 16px;
             padding: 16px 0;
             border-bottom: 1px solid rgba(255,255,255,.05);
         }
@@ -256,18 +255,14 @@ function fieldClass(array $err, string $key): string {
             font-family: 'Syne', sans-serif;
             font-size: .68rem; font-weight: 800;
             color: var(--gold);
-            flex-shrink: 0;
-            margin-top: 1px;
+            flex-shrink: 0; margin-top: 1px;
         }
-
-        .step-body {}
 
         .step-title {
             font-family: 'Syne', sans-serif;
             font-size: .8rem; font-weight: 700;
             color: rgba(255,255,255,.6);
-            letter-spacing: .02em;
-            margin-bottom: 2px;
+            letter-spacing: .02em; margin-bottom: 2px;
         }
 
         .step-desc {
@@ -293,7 +288,6 @@ function fieldClass(array $err, string $key): string {
             background: linear-gradient(to bottom, transparent, rgba(255,255,255,.06) 30%, rgba(255,255,255,.06) 70%, transparent);
         }
 
-        /* ── FORM CARD ── */
         .register-card {
             width: 100%;
             max-width: 500px;
@@ -333,7 +327,6 @@ function fieldClass(array $err, string $key): string {
             margin-bottom: 36px;
         }
 
-        /* ── Alerts ── */
         .alert {
             display: flex; align-items: flex-start; gap: 11px;
             border-radius: 10px;
@@ -362,24 +355,19 @@ function fieldClass(array $err, string $key): string {
             color: var(--sprout);
             font-style: normal;
             font-family: 'Syne', sans-serif;
-            font-size: .8rem;
-            font-weight: 700;
+            font-size: .8rem; font-weight: 700;
             text-decoration: none;
         }
 
         .alert.success a:hover { color: var(--mist); }
 
-        /* ── Form ── */
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
         }
 
-        .form-group {
-            margin-bottom: 18px;
-        }
-
+        .form-group { margin-bottom: 18px; }
         .form-group.full { grid-column: 1 / -1; }
 
         .form-group label {
@@ -416,7 +404,6 @@ function fieldClass(array $err, string $key): string {
         }
 
         .form-group select { padding-left: 42px; cursor: pointer; }
-
         .form-group input::placeholder { color: rgba(255,255,255,.18); font-style: italic; }
 
         .form-group input:focus,
@@ -437,7 +424,6 @@ function fieldClass(array $err, string $key): string {
             box-shadow: 0 0 0 4px rgba(248,113,113,.07);
         }
 
-        /* Select arrow */
         .select-wrap::after {
             content: '▾';
             position: absolute;
@@ -448,7 +434,6 @@ function fieldClass(array $err, string $key): string {
             pointer-events: none;
         }
 
-        /* Password toggle */
         .pw-toggle {
             position: absolute;
             right: 12px; top: 50%;
@@ -465,7 +450,6 @@ function fieldClass(array $err, string $key): string {
 
         .pw-toggle:hover { color: var(--sprout); }
 
-        /* Field hint */
         .field-hint {
             min-height: 18px;
             font-size: .73rem;
@@ -476,7 +460,6 @@ function fieldClass(array $err, string $key): string {
             line-height: 1.4;
         }
 
-        /* Conditional fields */
         .cond-field {
             overflow: hidden;
             max-height: 0;
@@ -491,11 +474,7 @@ function fieldClass(array $err, string $key): string {
             margin-bottom: 18px;
         }
 
-        /* Password strength */
-        .strength-bar {
-            display: flex; gap: 4px;
-            margin-top: 7px;
-        }
+        .strength-bar { display: flex; gap: 4px; margin-top: 7px; }
 
         .strength-seg {
             flex: 1; height: 3px;
@@ -504,7 +483,6 @@ function fieldClass(array $err, string $key): string {
             transition: background .3s;
         }
 
-        /* Divider */
         .form-divider {
             display: flex; align-items: center; gap: 12px;
             margin: 6px 0 22px;
@@ -518,7 +496,6 @@ function fieldClass(array $err, string $key): string {
             letter-spacing: .1em; text-transform: uppercase;
         }
 
-        /* Submit */
         .btn-submit {
             width: 100%;
             padding: 15px;
@@ -551,7 +528,6 @@ function fieldClass(array $err, string $key): string {
         .btn-arrow { transition: transform .2s; }
         .btn-submit:hover .btn-arrow { transform: translateX(4px); }
 
-        /* Sign in link */
         .signin-row {
             text-align: center;
             font-size: .83rem;
@@ -571,7 +547,6 @@ function fieldClass(array $err, string $key): string {
 
         .signin-row a:hover { color: var(--mist); }
 
-        /* ── Footer ── */
         footer {
             position: relative; z-index: 1;
             background: rgba(0,0,0,.2);
@@ -584,7 +559,6 @@ function fieldClass(array $err, string $key): string {
         .footer-copy { font-size: .7rem; color: rgba(255,255,255,.18); letter-spacing: .06em; }
         .footer-copy strong { color: rgba(185,222,187,.35); font-weight: 500; }
 
-        /* ── Responsive ── */
         @media (max-width: 900px) {
             .page-wrap { grid-template-columns: 1fr; }
             .panel-left { display: none; }
@@ -682,7 +656,6 @@ function fieldClass(array $err, string $key): string {
 
             <form id="regForm" method="POST" novalidate>
 
-                <!-- Row 1: Name + School ID -->
                 <div class="form-row">
                     <div class="form-group">
                         <label for="name">Full Name</label>
@@ -709,7 +682,6 @@ function fieldClass(array $err, string $key): string {
                     </div>
                 </div>
 
-                <!-- Email -->
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <div class="input-wrap">
@@ -723,7 +695,6 @@ function fieldClass(array $err, string $key): string {
                     <div class="field-hint"><?= $errorFields['email'] ?? '' ?></div>
                 </div>
 
-                <!-- Password -->
                 <div class="form-group">
                     <label for="password">Password</label>
                     <div class="input-wrap">
@@ -747,7 +718,6 @@ function fieldClass(array $err, string $key): string {
                     <hr><span>Campus Info</span><hr>
                 </div>
 
-                <!-- Row 2: Role + Campus -->
                 <div class="form-row">
                     <div class="form-group">
                         <label for="role">Role</label>
@@ -776,7 +746,6 @@ function fieldClass(array $err, string $key): string {
                     </div>
                 </div>
 
-                <!-- Course (students only) -->
                 <div class="form-group cond-field <?= $old['role']==='student'?'visible':'' ?>" id="courseField">
                     <label for="course">Course</label>
                     <div class="input-wrap">
@@ -789,7 +758,6 @@ function fieldClass(array $err, string $key): string {
                     <div class="field-hint"><?= $errorFields['course'] ?? '' ?></div>
                 </div>
 
-                <!-- Department (teachers only) -->
                 <div class="form-group cond-field <?= $old['role']==='teacher'?'visible':'' ?>" id="deptField">
                     <label for="department">Department</label>
                     <div class="input-wrap">
@@ -823,7 +791,6 @@ function fieldClass(array $err, string $key): string {
 </footer>
 
 <script>
-    // ── Password show/hide ──
     const pwToggle = document.getElementById('pwToggle');
     const pwInput  = document.getElementById('password');
 
@@ -833,33 +800,24 @@ function fieldClass(array $err, string $key): string {
         pwToggle.textContent = hide ? 'Hide' : 'Show';
     });
 
-    // ── Password strength bar ──
-    const segs = [
-        document.getElementById('s1'),
-        document.getElementById('s2'),
-        document.getElementById('s3'),
-        document.getElementById('s4'),
-    ];
-
+    const segs   = ['s1','s2','s3','s4'].map(id => document.getElementById(id));
     const colors = ['#f87171','#fb923c','#facc15','#6ee7b7'];
 
     pwInput.addEventListener('input', () => {
         const v = pwInput.value;
         let score = 0;
-        if (v.length >= 8)              score++;
-        if (/[A-Z]/.test(v))            score++;
-        if (/[0-9]/.test(v))            score++;
-        if (/[^A-Za-z0-9]/.test(v))     score++;
-
+        if (v.length >= 8)           score++;
+        if (/[A-Z]/.test(v))         score++;
+        if (/[0-9]/.test(v))         score++;
+        if (/[^A-Za-z0-9]/.test(v))  score++;
         segs.forEach((s, i) => {
             s.style.background = i < score ? colors[score - 1] : 'rgba(255,255,255,.08)';
         });
     });
 
-    // ── Role-conditional fields ──
-    const roleSelect   = document.getElementById('role');
-    const courseField  = document.getElementById('courseField');
-    const deptField    = document.getElementById('deptField');
+    const roleSelect  = document.getElementById('role');
+    const courseField = document.getElementById('courseField');
+    const deptField   = document.getElementById('deptField');
 
     roleSelect.addEventListener('change', () => {
         const val = roleSelect.value;
