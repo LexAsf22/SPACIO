@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
-
 class LabsConfig(AppConfig):
-    name = 'labs'
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'apps.labs'
