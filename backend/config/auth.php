@@ -1,4 +1,5 @@
 <?php
+<<<<<<< HEAD
 // backend/config/auth.php
 session_start();
 
@@ -14,6 +15,13 @@ session_start();
 function checkLogin() {
     if (!isset($_SESSION['user'])) {
         header("Location: ../../login.php");
+=======
+//session_start();
+
+function checkLogin(){
+    if(!isset($_SESSION['user'])){
+        header("Location: /spacio/login.php");
+>>>>>>> ec6daf5 (new)
         exit;
     }
 
@@ -25,6 +33,7 @@ function checkLogin() {
     }
 }
 
+<<<<<<< HEAD
 /**
  * Ensure the logged-in user has one of the allowed roles.
  * Accepts a single role string or an array of allowed roles.
@@ -40,37 +49,34 @@ function checkRole($roles) {
 
     if (!in_array($_SESSION['user']['role'], $allowed, true)) {
         redirectToDashboard();
+=======
+function checkRole($role){
+    if(strtolower($_SESSION['user']['role']) !== strtolower($role)){
+        header("Location: /spacio/index.php");
+        exit;
+>>>>>>> ec6daf5 (new)
     }
 }
 
-/**
- * Redirect an already-logged-in user away from guest-only pages
- * (e.g. index.php, login.php, register.php).
- * Call this at the top of those pages.
- */
 function redirectIfLoggedIn() {
     if (isset($_SESSION['user'])) {
         redirectToDashboard();
     }
 }
 
-/**
- * Send the current user to their role-specific dashboard.
- */
 function redirectToDashboard() {
     $role = $_SESSION['user']['role'] ?? '';
-
     $dashboards = [
         'student' => '../../frontend/student/dashboard.php',
         'teacher' => '../../frontend/teacher/dashboard.php',
         'admin'   => '../../frontend/admin/dashboard.php',
     ];
-
     $destination = $dashboards[$role] ?? '../../login.php';
     header("Location: " . $destination);
     exit;
 }
 
+<<<<<<< HEAD
 // ─────────────────────────────────────────────
 // SESSION HELPERS
 // ─────────────────────────────────────────────
@@ -78,13 +84,12 @@ function redirectToDashboard() {
 /**
  * Return the current logged-in user array, or null if not logged in.
  */
+=======
+>>>>>>> ec6daf5 (new)
 function getCurrentUser() {
     return $_SESSION['user'] ?? null;
 }
 
-/**
- * Return the role of the current user, or null if not logged in.
- */
 function getCurrentRole() {
     return $_SESSION['user']['role'] ?? null;
 }

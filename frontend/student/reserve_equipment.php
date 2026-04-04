@@ -66,6 +66,7 @@ if ($recentResult['success'] && isset($recentResult['data'])) {
             </label>
             <select name="equipment" required style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;">
                 <option value="">-- Choose Equipment --</option>
+<<<<<<< HEAD
                 <?php foreach ($equip_by_campus as $campus => $items): ?>
                     <optgroup label="── <?php echo htmlspecialchars($campus); ?> ──">
                         <?php foreach ($items as $e): ?>
@@ -73,6 +74,28 @@ if ($recentResult['success'] && isset($recentResult['data'])) {
                                 <?php echo htmlspecialchars($e['equipment_name'] ?? $e['name'] ?? ''); ?>
                                 — <?php echo htmlspecialchars($e['lab_name'] ?? ''); ?>
                                 (<?php echo (int) ($e['quantity'] ?? 0); ?> available)
+=======
+                <?php
+                $campuses = ['CHS', 'CLI'];
+                foreach ($campuses as $campus):
+                    $equipment = $conn->query("
+                        SELECT e.*, l.lab_name
+                        FROM   equipment e
+                        JOIN   laboratories l ON e.lab_id = l.id
+                        WHERE  l.campus = '$campus'
+                        AND    e.quantity > 0
+                        AND    e.status = 'Available'
+                        ORDER  BY l.lab_name, e.equipment_name
+                    ");
+                    if ($equipment->num_rows === 0) continue;
+                ?>
+                    <optgroup label="── <?php echo $campus; ?> ──">
+                        <?php while ($e = $equipment->fetch_assoc()): ?>
+                            <option value="<?php echo $e['id']; ?>">
+                                <?php echo htmlspecialchars($e['equipment_name']); ?>
+                                — <?php echo htmlspecialchars($e['lab_name']); ?>
+                                (<?php echo (int)$e['quantity']; ?> available)
+>>>>>>> ec6daf5 (new)
                             </option>
                         <?php endforeach; ?>
                     </optgroup>

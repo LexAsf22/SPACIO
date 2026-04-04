@@ -1,7 +1,7 @@
 <?php
 session_start();
 if(isset($_SESSION['user'])){
-    $role = $_SESSION['user']['role'];
+    $role = strtolower($_SESSION['user']['role']);
     $dashboards = [
         'student' => 'frontend/student/dashboard.php',
         'teacher' => 'frontend/teacher/dashboard.php',

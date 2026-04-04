@@ -68,6 +68,7 @@ if ($recentResult['success'] && isset($recentResult['data'])) {
             </label>
             <select name="lab" required style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;">
                 <option value="">-- Choose a Lab --</option>
+<<<<<<< HEAD
                 <?php foreach ($labs_by_campus as $campus => $labs): ?>
                     <optgroup label="── <?php echo htmlspecialchars($campus); ?> ──">
                         <?php foreach ($labs as $lab): ?>
@@ -76,6 +77,21 @@ if ($recentResult['success'] && isset($recentResult['data'])) {
                                 <?php echo !empty($lab['total_computers'])
                                     ? ' (' . (int) $lab['total_computers'] . ' computers)'
                                     : ''; ?>
+=======
+                <?php
+                $campuses = ['CHS', 'CLI'];
+                foreach ($campuses as $campus):
+                    $labs = $conn->query("
+                        SELECT * FROM laboratories 
+                        WHERE campus = '$campus' 
+                        ORDER BY lab_name
+                    ");
+                ?>
+                    <optgroup label="── <?php echo $campus; ?> ──">
+                        <?php while ($lab = $labs->fetch_assoc()): ?>
+                            <option value="<?php echo $lab['id']; ?>">
+                                <?php echo htmlspecialchars($lab['lab_name']); ?>
+>>>>>>> ec6daf5 (new)
                             </option>
                         <?php endforeach; ?>
                     </optgroup>

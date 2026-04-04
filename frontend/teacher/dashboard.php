@@ -1,4 +1,5 @@
 <?php
+<<<<<<< HEAD
 // frontend/teacher/dashboard.php
 include("../includes/header.php");
 checkRole('teacher');
@@ -89,12 +90,112 @@ if ($recentResult['success'] && isset($recentResult['data'])) {
     <div style="background:#f39c12; color:white; padding:20px; flex:1; border-radius:5px;">
         <h3>Recent Reservations</h3>
         <p id="recentCount"><?php echo count($recent_rows); ?></p>
+=======
+session_start();
+include_once("../../backend/config/auth.php");
+include_once("../../backend/config/database.php");
+include_once("../includes/flash.php");
+
+checkLogin();
+checkRole('teacher');
+
+$user   = $_SESSION['user'];
+$userId = $user['id'];
+$userName = $user['name'];
+
+// ── Pull stats ──
+$openIssues     = 0;
+$resolvedIssues = 0;
+$myIssues       = 0;
+$recentIssues   = [];
+
+$r = $conn->prepare("SELECT COUNT(*) as c FROM issues WHERE status = 'open'");
+$r->execute();
+$openIssues = $r->get_result()->fetch_assoc()['c'] ?? 0;
+
+$r = $conn->prepare("SELECT COUNT(*) as c FROM issues WHERE status = 'resolved'");
+$r->execute();
+$resolvedIssues = $r->get_result()->fetch_assoc()['c'] ?? 0;
+
+// Count issues reported by this teacher
+$r = $conn->prepare("SELECT COUNT(*) as c FROM issues WHERE user_id = ?");
+$r->bind_param("i", $userId);
+$r->execute();
+$myIssues = $r->get_result()->fetch_assoc()['c'] ?? 0;
+
+// Get last 5 issues reported by this teacher
+$r = $conn->prepare("SELECT * FROM issues WHERE user_id = ? ORDER BY created_at DESC LIMIT 5");
+$r->bind_param("i", $userId);
+$r->execute();
+$recentIssues = $r->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// ── Page meta ──
+$pageTitle   = "Dashboard";
+$pageEyebrow = "Welcome back, " . htmlspecialchars(explode(' ', $userName)[0]);
+$activePage  = "dashboard";
+
+include("../includes/header.php");
+?>
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header-eyebrow">
+        <div class="eyebrow-dot"></div>
+        <span class="eyebrow-text">Teacher Portal</span>
+    </div>
+    <h1 class="page-title">Good <?php
+        $h = (int)date('H');
+        echo $h < 12 ? 'morning' : ($h < 17 ? 'afternoon' : 'evening');
+    ?>, <?php echo htmlspecialchars(explode(' ', $userName)[0]); ?>.</h1>
+    <p class="page-subtitle">Monitor lab usage, report issues, and stay on top of your campus resources.</p>
+</div>
+
+<!-- Stat Cards -->
+<div class="stats-grid" style="margin-bottom:28px;">
+
+    <div class="stat-card accent-red stagger-1">
+        <span class="stat-card-icon">🚨</span>
+        <div class="stat-card-value" data-count="<?php echo $openIssues; ?>">
+            <?php echo $openIssues; ?>
+        </div>
+        <div class="stat-card-label">Open Issues</div>
+        <span class="stat-card-trend <?php echo $openIssues > 0 ? 'down' : 'up'; ?>">
+            <?php echo $openIssues > 0 ? 'Needs attention' : 'All resolved'; ?>
+        </span>
+    </div>
+
+    <div class="stat-card accent-green stagger-2">
+        <span class="stat-card-icon">✅</span>
+        <div class="stat-card-value" data-count="<?php echo $resolvedIssues; ?>">
+            <?php echo $resolvedIssues; ?>
+        </div>
+        <div class="stat-card-label">Resolved Issues</div>
+        <span class="stat-card-trend up">Fixed</span>
+    </div>
+
+    <div class="stat-card accent-gold stagger-3">
+        <span class="stat-card-icon">📋</span>
+        <div class="stat-card-value" data-count="<?php echo $myIssues; ?>">
+            <?php echo $myIssues; ?>
+        </div>
+        <div class="stat-card-label">My Reports</div>
+        <span class="stat-card-trend neutral">Submitted by you</span>
+    </div>
+
+    <div class="stat-card accent-blue stagger-4">
+        <span class="stat-card-icon">📊</span>
+        <div class="stat-card-value">—</div>
+        <div class="stat-card-label">Labs in Use</div>
+        <span class="stat-card-trend neutral">Today</span>
+>>>>>>> ec6daf5 (new)
     </div>
 
 </div>
 
-<h3 style="margin-top:30px;">Recent Lab Reservations</h3>
+<!-- Quick Actions + Recent Issues -->
+<div class="grid-2" style="gap:20px; align-items:start;">
 
+<<<<<<< HEAD
 <input
     type="text"
     id="searchRes"
@@ -162,5 +263,99 @@ document.getElementById('searchRes').addEventListener('keyup', function () {
     }, 200);
 });
 </script>
+=======
+    <!-- Quick Actions -->
+    <div class="card stagger-2">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Quick Actions</div>
+                <div class="card-subtitle">Jump to common tasks</div>
+            </div>
+        </div>
+        <div class="card-body" style="display:flex; flex-direction:column; gap:10px;">
+
+            <a href="report_issue.php" class="btn btn-ghost" style="justify-content:flex-start; width:100%; gap:14px; padding:14px 16px; border-radius:10px; font-size:.82rem; text-transform:none; letter-spacing:0;">
+                <span style="font-size:1.2rem;">🚨</span>
+                <div style="text-align:left;">
+                    <div style="font-weight:700; color:#fff; font-size:.85rem;">Report an Issue</div>
+                    <div style="font-size:.73rem; color:rgba(255,255,255,.3); font-style:italic; margin-top:1px;">Flag broken equipment or classroom problems</div>
+                </div>
+                <span style="margin-left:auto; opacity:.3;">→</span>
+            </a>
+
+            <a href="lab_usage.php" class="btn btn-ghost" style="justify-content:flex-start; width:100%; gap:14px; padding:14px 16px; border-radius:10px; font-size:.82rem; text-transform:none; letter-spacing:0;">
+                <span style="font-size:1.2rem;">📊</span>
+                <div style="text-align:left;">
+                    <div style="font-weight:700; color:#fff; font-size:.85rem;">Lab Usage</div>
+                    <div style="font-size:.73rem; color:rgba(255,255,255,.3); font-style:italic; margin-top:1px;">View current and upcoming lab activity</div>
+                </div>
+                <span style="margin-left:auto; opacity:.3;">→</span>
+            </a>
+
+            <a href="issue_status.php" class="btn btn-ghost" style="justify-content:flex-start; width:100%; gap:14px; padding:14px 16px; border-radius:10px; font-size:.82rem; text-transform:none; letter-spacing:0;">
+                <span style="font-size:1.2rem;">📋</span>
+                <div style="text-align:left;">
+                    <div style="font-weight:700; color:#fff; font-size:.85rem;">Issue Status</div>
+                    <div style="font-size:.73rem; color:rgba(255,255,255,.3); font-style:italic; margin-top:1px;">Track the status of your submitted reports</div>
+                </div>
+                <span style="margin-left:auto; opacity:.3;">→</span>
+            </a>
+
+        </div>
+    </div>
+
+    <!-- Recent Issues -->
+    <div class="card stagger-3">
+        <div class="card-header">
+            <div>
+                <div class="card-title">My Recent Reports</div>
+                <div class="card-subtitle">Issues you've submitted</div>
+            </div>
+            <a href="issue_status.php" class="btn btn-ghost btn-sm">View All</a>
+        </div>
+
+        <?php if (empty($recentIssues)): ?>
+        <div class="empty-state">
+            <div class="empty-state-icon">🚨</div>
+            <div class="empty-state-title">No issues reported</div>
+            <div class="empty-state-desc">Your reported issues will appear here.</div>
+        </div>
+        <?php else: ?>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Issue</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($recentIssues as $issue):
+                    $status = $issue['status'] ?? 'open';
+                    $badgeClass = match($status) {
+                        'resolved'    => 'badge-green',
+                        'in_progress' => 'badge-blue',
+                        default       => 'badge-red',
+                    };
+                ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($issue['title'] ?? $issue['description'] ?? '—'); ?></td>
+                    <td style="color:rgba(255,255,255,.4); font-size:.8rem;">
+                        <?php echo htmlspecialchars($issue['location'] ?? '—'); ?>
+                    </td>
+                    <td>
+                        <span class="badge <?php echo $badgeClass; ?>">
+                            <?php echo ucfirst(str_replace('_', ' ', $status)); ?>
+                        </span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
+
+</div>
+>>>>>>> ec6daf5 (new)
 
 <?php include("../includes/footer.php"); ?>

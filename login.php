@@ -5,7 +5,20 @@ require_once "backend/config/helpers.php";
 require_once "backend/config/auth.php";
 
 // Redirect already-logged-in users
+<<<<<<< HEAD
 redirectIfLoggedIn();
+=======
+if (isset($_SESSION['user'])) {
+    $role = strtolower($_SESSION['user']['role']);
+    $dashboards = [
+        'student' => 'frontend/student/dashboard.php',
+        'teacher' => 'frontend/teacher/dashboard.php',
+        'admin'   => 'frontend/admin/dashboard.php',
+    ];
+    header("Location: " . ($dashboards[$role] ?? 'index.php'));
+    exit;
+}
+>>>>>>> ec6daf5 (new)
 
 $error = null;
 
