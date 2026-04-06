@@ -403,7 +403,8 @@ function fieldClass(array $err, string $key): string {
             appearance: none;
         }
 
-        .form-group select { padding-left: 42px; cursor: pointer; }
+        .form-group select { padding-left: 42px; cursor: pointer; color: #fff; }
+        .form-group select option { background: #1e4422; color: #fff; }
         .form-group input::placeholder { color: rgba(255,255,255,.18); font-style: italic; }
 
         .form-group input:focus,
@@ -735,12 +736,14 @@ function fieldClass(array $err, string $key): string {
 
                     <div class="form-group">
                         <label for="campus">Campus</label>
-                        <div class="input-wrap">
+                        <div class="input-wrap select-wrap">
                             <span class="input-icon">🏫</span>
-                            <input type="text" id="campus" name="campus"
-                                placeholder="Main Campus"
-                                value="<?= $old['campus'] ?>"
+                            <select id="campus" name="campus"
                                 class="<?= fieldClass($errorFields,'campus') ?>">
+                                <option value="">Select Campus</option>
+                                <option value="CLI" <?= $old['campus']==='CLI'?'selected':'' ?>>CLI</option>
+                                <option value="CHS" <?= $old['campus']==='CHS'?'selected':'' ?>>CHS</option>
+                            </select>
                         </div>
                         <div class="field-hint"><?= $errorFields['campus'] ?? '' ?></div>
                     </div>

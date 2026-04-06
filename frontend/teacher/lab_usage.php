@@ -1,16 +1,18 @@
 <?php
 // frontend/teacher/lab_usage.php
-include("../includes/header.php");
+include_once("../../backend/config/auth.php");
+include_once("../../backend/config/database.php");
+include_once("../../backend/config/helpers.php");
+checkLogin();
 checkRole('teacher');
 
-// ── Fetch approved lab usage from Django ──────────────────────────────────────
+// ── Fetch approved lab usage ───────────────────────────────────────────────────
 $result = djangoGet('/api/v1/reports/usage/?status=Approved&limit=50&ordering=-date');
 $usage  = [];
 
 if ($result['success'] && isset($result['data'])) {
     $usage = $result['data']['results'] ?? $result['data'] ?? [];
 } else {
-    // Fallback: query DB directly if Django is unreachable
     $res = $conn->query("
         SELECT r.*, u.name AS student_name, l.lab_name
         FROM   reservations r
@@ -20,48 +22,80 @@ if ($result['success'] && isset($result['data'])) {
         ORDER  BY r.date DESC
         LIMIT  50
     ");
-    while ($row = $res->fetch_assoc()) {
-        $usage[] = $row;
-    }
+    while ($row = $res->fetch_assoc()) $usage[] = $row;
 }
+
+include("../includes/header.php");
 ?>
 
-<h2>Lab Usage Monitoring</h2>
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Lab Usage</h1>
+        <p class="page-subtitle">Approved reservations across all labs</p>
+    </div>
+    <span class="badge badge-green" style="font-size:.8rem; padding:6px 14px; font-family:var(--font-mono);">
+        <?php echo count($usage); ?> approved
+    </span>
+</div>
 
-<input type="text" id="searchLab" placeholder="Search by lab or student..."
-       style="padding:10px; margin:10px 0; width:50%;">
+<!-- Search -->
+<div class="filter-bar">
+    <input type="text" id="searchLab" class="form-control"
+           placeholder="Search by lab or student..."
+           style="min-width:260px;">
+    <span class="filter-summary">Showing up to 50 most recent</span>
+</div>
 
-<table id="usageTable" border="1" cellpadding="10" cellspacing="0"
-       style="border-collapse:collapse; width:100%;">
-    <tr>
-        <th>Student</th>
-        <th>Lab</th>
-        <th>Date</th>
-        <th>Time Slot</th>
-    </tr>
-
-    <?php if (empty($usage)): ?>
-    <tr>
-        <td colspan="4" style="text-align:center; color:#888; font-style:italic; padding:16px;">
-            No approved lab usage records found.
-        </td>
-    </tr>
-    <?php else: ?>
-    <?php foreach ($usage as $u): ?>
-    <tr>
-        <td><?php echo htmlspecialchars($u['student_name'] ?? '—'); ?></td>
-        <td><?php echo htmlspecialchars($u['lab_name']     ?? '—'); ?></td>
-        <td><?php echo isset($u['date']) ? date("F d, Y", strtotime($u['date'])) : '—'; ?></td>
-        <td><?php echo htmlspecialchars($u['time_slot']    ?? '—'); ?></td>
-    </tr>
-    <?php endforeach; ?>
-    <?php endif; ?>
-</table>
+<!-- Table -->
+<div class="table-wrap">
+    <table class="sp-table" id="usageTable">
+        <thead>
+            <tr>
+                <th style="width:44px; text-align:center;">#</th>
+                <th>Student</th>
+                <th>Lab</th>
+                <th>Date</th>
+                <th>Time Slot</th>
+                <th style="width:110px; text-align:center;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php if (empty($usage)): ?>
+            <tr>
+                <td colspan="6">
+                    <div class="empty-state">
+                        <span class="empty-state-icon">🔬</span>
+                        <p class="empty-state-text">No approved lab usage records found.</p>
+                    </div>
+                </td>
+            </tr>
+        <?php else: ?>
+            <?php foreach ($usage as $n => $u): ?>
+            <tr>
+                <td style="text-align:center;" class="td-mono"><?php echo $n + 1; ?></td>
+                <td style="font-weight:600; color:var(--ink-800);">
+                    <?php echo htmlspecialchars($u['student_name'] ?? '—'); ?>
+                </td>
+                <td><?php echo htmlspecialchars($u['lab_name']  ?? '—'); ?></td>
+                <td class="td-mono">
+                    <?php echo isset($u['date']) ? date("M d, Y", strtotime($u['date'])) : '—'; ?>
+                </td>
+                <td class="td-mono"><?php echo htmlspecialchars($u['time_slot'] ?? '—'); ?></td>
+                <td style="text-align:center;">
+                    <span class="badge badge-green">Approved</span>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+        <?php endif; ?>
+        </tbody>
+    </table>
+</div>
 
 <script>
-document.getElementById('searchLab').addEventListener('keyup', function () {
+document.getElementById('searchLab').addEventListener('input', function () {
     const filter = this.value.toLowerCase();
-    document.querySelectorAll('#usageTable tr:not(:first-child)').forEach(row => {
+    document.querySelectorAll('#usageTable tbody tr').forEach(row => {
         row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
     });
 });

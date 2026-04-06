@@ -5,6 +5,7 @@ from apps.availability.views import (
     LabAvailabilityView,
     EquipmentAvailabilityView,
     AvailableSlotsView,
+    EquipmentListAvailabilityView,
 )
 
 urlpatterns = [
@@ -16,4 +17,5 @@ urlpatterns = [
 
     # GET /api/v1/availability/slots/      ← list open slots for a lab on a date
     path("slots/",     AvailableSlotsView.as_view(),        name="available-slots"),
+    path("equipment/list/", EquipmentListAvailabilityView.as_view(), name="equipment-list-availability"),
 ]

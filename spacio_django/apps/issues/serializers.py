@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 from apps.issues.models import Issue
+from apps.authentication.models import SpacioUser
 
 
 class IssueSerializer(serializers.ModelSerializer):
@@ -18,6 +19,11 @@ class IssueSerializer(serializers.ModelSerializer):
 
 
 class IssueCreateSerializer(serializers.ModelSerializer):
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=SpacioUser.objects.all(),
+        source="user",
+    )
+
     class Meta:
         model  = Issue
         fields = ["user_id", "campus", "room", "category", "description", "priority"]

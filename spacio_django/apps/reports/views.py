@@ -98,7 +98,7 @@ class TeacherRecentReservationsView(APIView):
 
         queryset = Reservation.objects.select_related(
             "user", "lab"
-        ).order_by("-date")[:limit]
+        ).filter(lab__isnull=False).order_by("-date")[:limit]
 
         results = [
             {

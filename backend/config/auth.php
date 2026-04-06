@@ -1,6 +1,8 @@
 <?php
 // backend/config/auth.php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // ─────────────────────────────────────────────
 // CORE AUTH CHECKS
@@ -13,17 +15,15 @@ session_start();
  */
 function checkLogin() {
     if (!isset($_SESSION['user'])) {
-        header("Location: ../../login.php");
+        header("Location: /spacio/login.php");
         exit;
     }
-
-    // If JWT is missing but user session exists, force re-login
     if (!isset($_SESSION['jwt'])) {
         session_destroy();
-        header("Location: ../../login.php?reason=session_expired");
+        header("Location: /spacio/login.php?reason=session_expired");
         exit;
     }
-}
+}   
 
 /**
  * Ensure the logged-in user has one of the allowed roles.
@@ -37,8 +37,10 @@ function checkRole($roles) {
     checkLogin();
 
     $allowed = is_array($roles) ? $roles : [$roles];
+    $userRole = strtolower($_SESSION['user']['role']);
+    $allowedLower = array_map('strtolower', $allowed);
 
-    if (!in_array($_SESSION['user']['role'], $allowed, true)) {
+    if (!in_array($userRole, $allowedLower, true)) {
         redirectToDashboard();
     }
 }
@@ -59,14 +61,12 @@ function redirectIfLoggedIn() {
  */
 function redirectToDashboard() {
     $role = $_SESSION['user']['role'] ?? '';
-
     $dashboards = [
-        'student' => '../../frontend/student/dashboard.php',
-        'teacher' => '../../frontend/teacher/dashboard.php',
-        'admin'   => '../../frontend/admin/dashboard.php',
+        'student' => '/spacio/frontend/student/dashboard.php',
+        'teacher' => '/spacio/frontend/teacher/dashboard.php',
+        'admin'   => '/spacio/frontend/admin/dashboard.php',
     ];
-
-    $destination = $dashboards[$role] ?? '../../login.php';
+    $destination = $dashboards[$role] ?? '/spacio/login.php';
     header("Location: " . $destination);
     exit;
 }
@@ -102,7 +102,9 @@ function getCurrentRole() {
  * @param string $refreshToken Long-lived JWT refresh token
  */
 function storeAuthSession(array $user, string $accessToken, string $refreshToken) {
-    session_regenerate_id(true); // Prevent session fixation attacks
+    if (!headers_sent()) {
+        session_regenerate_id(true);
+    }
 
     $_SESSION['user']          = $user;
     $_SESSION['jwt']           = $accessToken;

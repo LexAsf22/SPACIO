@@ -29,6 +29,7 @@ if (isset($_POST['login'])) {
             'name'  => $data['user']['name'],
             'email' => $data['user']['email'],
             'role'  => $data['user']['role'],
+            'campus' => $data['user']['campus'] ?? '',
         ];
 
         // Store JWT + user in session (defined in auth.php)
@@ -36,18 +37,17 @@ if (isset($_POST['login'])) {
 
         // Redirect to role dashboard
         $dashboards = [
-            'student' => 'frontend/student/dashboard.php',
-            'teacher' => 'frontend/teacher/dashboard.php',
-            'admin'   => 'frontend/admin/dashboard.php',
-        ];
-        header("Location: " . ($dashboards[$user['role']] ?? 'index.php'));
+    'student' => '/spacio/frontend/student/dashboard.php',
+    'teacher' => '/spacio/frontend/teacher/dashboard.php',
+    'admin'   => '/spacio/frontend/admin/dashboard.php',
+];
+header("Location: " . ($dashboards[$user['role']] ?? '/spacio/index.php'));
         exit;
 
     } else {
         // Show error from Django response, or a fallback message
-        $error = $result['data']['detail']
-              ?? $result['data']['message']
-              ?? "Invalid email or password. Please try again.";
+        $raw   = $result['data']['detail'] ?? $result['data']['message'] ?? "Invalid email or password. Please try again.";
+        $error = is_array($raw) ? implode(' ', array_map(fn($v) => is_array($v) ? implode(' ', $v) : $v, $raw)) : $raw;
     }
 }
 ?>

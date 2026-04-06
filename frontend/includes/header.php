@@ -1,86 +1,144 @@
 <?php
 // frontend/includes/header.php
-include("../../backend/config/auth.php");
-include("../../backend/config/database.php");
-include("../../frontend/includes/flash.php"); // ← add this
-checkLogin(); // ensure the user is logged in
+include_once("../../backend/config/auth.php");
+include_once("../../backend/config/database.php");
+include_once("../../backend/config/helpers.php");
+checkLogin();
 
 $user = $_SESSION['user'];
-$role = $user['role'];
+$role = strtolower($user['role']); // ← normalize to lowercase; Django returns 'student'/'teacher'/'admin'
 
-// Each role has their own dashboard
-$dashboards = [
-    'student' => '/spacio/frontend/student/dashboard.php',
-    'teacher' => '/spacio/frontend/teacher/dashboard.php',
-    'admin'   => '/spacio/frontend/admin/dashboard.php',
-];
-$dashboardLink = $dashboards[$role] ?? '/spacio/login.php';
+// Role-based nav config
+$nav = [];
+$dashboardLink = '/spacio/frontend/' . strtolower($role) . '/dashboard.php';
+
+if ($role === 'student') {
+    $nav = [
+        ['href' => '/spacio/frontend/student/dashboard.php',         'icon' => '⊞', 'label' => 'Dashboard'],
+        ['href' => '/spacio/frontend/student/reserve_lab.php',       'icon' => '🔬', 'label' => 'Reserve Lab'],
+        ['href' => '/spacio/frontend/student/reserve_equipment.php', 'icon' => '🖥', 'label' => 'Reserve Equipment'],
+        ['href' => '/spacio/frontend/student/my_reservations.php',   'icon' => '📋', 'label' => 'My Reservations'],
+    ];
+}
+
+if ($role === 'teacher') {
+    $nav = [
+        ['href' => '/spacio/frontend/teacher/dashboard.php',    'icon' => '⊞', 'label' => 'Dashboard'],
+        ['href' => '/spacio/frontend/teacher/lab_usage.php',    'icon' => '📊', 'label' => 'Lab Usage'],
+        ['href' => '/spacio/frontend/teacher/report_issue.php', 'icon' => '⚠', 'label' => 'Report Issue'],
+        ['href' => '/spacio/frontend/teacher/issue_status.php', 'icon' => '🔍', 'label' => 'Issue Status'],
+    ];
+}
+
+if ($role === 'admin') {
+    $nav = [
+        ['href' => '/spacio/frontend/admin/dashboard.php',   'icon' => '⊞', 'label' => 'Dashboard'],
+        ['href' => '/spacio/frontend/admin/approvals.php',   'icon' => '✓', 'label' => 'Approve Reservations'],
+        ['href' => '/spacio/frontend/admin/inventory.php',   'icon' => '📦', 'label' => 'Inventory'],
+        ['href' => '/spacio/frontend/admin/maintenance.php', 'icon' => '🔧', 'label' => 'Maintenance'],
+        ['href' => '/spacio/frontend/admin/reports.php',     'icon' => '📈', 'label' => 'Reports & Analytics'],
+    ];
+}
+
+// Current page detection for active state
+$currentPath = $_SERVER['PHP_SELF'];
+
+// User initials for avatar
+$nameParts = explode(' ', trim($user['name']));
+$initials  = strtoupper(
+    (isset($nameParts[0]) ? $nameParts[0][0] : '') .
+    (isset($nameParts[1]) ? $nameParts[1][0] : '')
+);
 ?>
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Campus System</title>
-    <style>
-        body {margin:0; font-family:Arial;}
-        .sidebar {
-            width:200px;
-            background:#2c5f2e; /* green school design */
-            color:white;
-            height:100vh;
-            position:fixed;
-            padding:20px 10px;
-        }
-        .sidebar h3 {text-align:center; margin-bottom:30px;}
-        .sidebar a {
-            display:block;
-            color:white;
-            text-decoration:none;
-            padding:10px 5px;
-            margin-bottom:5px;
-            border-radius:5px;
-        }
-        .sidebar a:hover {background:#1e3d1a;}
-        .content {margin-left:220px; padding:20px;}
-        .topbar {
-            background:#4caf50;
-            color:white;
-            padding:15px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spacio — Campus Lab & Classroom Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/spacio/css/main.css">
 </head>
 <body>
 
-<div class="sidebar">
-    <h3><?php echo ucfirst($role); ?> Menu</h3>
+<!-- ── Sidebar ─────────────────────────────────────────────── -->
+<aside class="sidebar">
 
-    <a href="<?php echo $dashboardLink; ?>">Dashboard</a>
+    <!-- Logo -->
+    <div class="sidebar-logo">
+        <a href="<?php echo $dashboardLink; ?>" class="sidebar-logo-mark">
+            <div class="sidebar-logo-icon">Sp</div>
+            <div class="sidebar-logo-text">
+                <span class="sidebar-logo-name">Spacio</span>
+                <span class="sidebar-logo-sub">Lab Management</span>
+            </div>
+        </a>
+    </div>
 
-    <?php if($role == "student"){ ?>
-        <a href="../student/reserve_lab.php">Reserve Lab</a>
-        <a href="../student/reserve_equipment.php">Reserve Equipment</a>
-        <a href="../student/my_reservations.php">My Reservations</a>
-        <a href="../student/view_computers.php">View Computers</a>
-    <?php } ?>
+    <!-- Role badge -->
+    <div class="sidebar-role">
+        <div class="sidebar-role-dot"></div>
+        <span class="sidebar-role-label">Role</span>
+        <span class="sidebar-role-name"><?php echo htmlspecialchars($role); ?></span>
+    </div>
 
-    <?php if($role == "teacher"){ ?>
-        <a href="../teacher/lab_usage.php">Lab Usage</a>
-        <a href="../teacher/report_issue.php">Report Issue</a>
-        <a href="../teacher/issue_status.php">Issue Status</a>
-    <?php } ?>
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+        <div class="sidebar-section-label">Navigation</div>
+        <?php foreach ($nav as $item):
+            $isActive = strpos($currentPath, basename($item['href'])) !== false;
+        ?>
+            <a href="<?php echo $item['href']; ?>"
+               class="sidebar-link <?php echo $isActive ? 'active' : ''; ?>">
+                <span class="sidebar-link-icon"><?php echo $item['icon']; ?></span>
+                <?php echo htmlspecialchars($item['label']); ?>
+            </a>
+        <?php endforeach; ?>
+    </nav>
 
-    <?php if($role == "admin"){ ?>
-        <a href="../admin/approvals.php">Approve Reservations</a>
-        <a href="../admin/inventory.php">Inventory Management</a>
-        <a href="../admin/maintenance.php">Maintenance Requests</a>
-        <a href="../admin/reports.php">Reports & Analytics</a>
-    <?php } ?>
+    <!-- User & Logout -->
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <div class="sidebar-avatar"><?php echo $initials; ?></div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name"><?php echo htmlspecialchars($user['name']); ?></div>
+                <div class="sidebar-user-campus"><?php echo htmlspecialchars($user['campus'] ?? 'N/A'); ?></div>
+            </div>
+        </div>
+        <a href="/spacio/logout.php" class="sidebar-logout">
+            <span>↪</span> Sign out
+        </a>
+    </div>
 
-    <a href="/spacio/logout.php" class="logout-link">&#x2192; Logout</a>
-</div>
+</aside>
 
-<div class="content">
-<div class="topbar">
-    Welcome, <?php echo $user['name']; ?> | Campus: <?php echo $user['campus']; ?>
-</div>
+<!-- ── Top Bar ─────────────────────────────────────────────── -->
+<header class="topbar">
+    <div class="topbar-title" id="pageTitle">Dashboard</div>
+    <div class="topbar-actions">
+        <span class="topbar-badge">
+            <span class="topbar-badge-dot"></span>
+            <?php echo htmlspecialchars($user['campus'] ?? 'N/A'); ?>
+        </span>
+    </div>
+</header>
+
+<!-- ── Page Content ────────────────────────────────────────── -->
+<main class="main-content">
+<div class="page-body">
+
+<script>
+// Set topbar title to current page's h1/h2 or nav label
+(function() {
+    const currentHref = window.location.pathname;
+    const links = document.querySelectorAll('.sidebar-link');
+    links.forEach(link => {
+        if (currentHref.includes(link.getAttribute('href').split('/').pop().replace('.php',''))) {
+            const label = link.textContent.trim();
+            document.getElementById('pageTitle').textContent = label;
+        }
+    });
+})();
+</script>

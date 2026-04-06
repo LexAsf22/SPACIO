@@ -5,11 +5,10 @@ checkRole('student');
 
 $user_id = (int) $_SESSION['user']['id'];
 
-// ── Handle reservation form submission ────────────────────────────────────────
 if (isset($_POST['reserve'])) {
-    $lab_id    = (int)   $_POST['lab'];
-    $date      =  trim(  $_POST['date']      ?? '');
-    $time_slot =  trim(  $_POST['time_slot'] ?? '');
+    $lab_id    = (int)  $_POST['lab'];
+    $date      = trim(  $_POST['date']      ?? '');
+    $time_slot = trim(  $_POST['time_slot'] ?? '');
 
     if ($date < date('Y-m-d')) {
         setFlash("Please select a future date.", "error");
@@ -25,18 +24,15 @@ if (isset($_POST['reserve'])) {
         if ($result['success']) {
             setFlash("Reservation submitted! Waiting for admin approval.", "success");
         } else {
-            $msg = $result['data']['detail']
-                ?? $result['data']['message']
-                ?? "Something went wrong. Please try again.";
+            $msg = $result['data']['detail'] ?? $result['data']['message'] ?? "Something went wrong. Please try again.";
             setFlash($msg, "error");
         }
     }
 
-    header("Location: " . $_SERVER['PHP_SELF']);
+    echo "<script>window.location='" . $_SERVER['PHP_SELF'] . "';</script>";
     exit;
 }
 
-// ── Fetch labs for dropdown ───────────────────────────────────────────────────
 $labsResult = djangoGet('/api/v1/labs/');
 $labs_by_campus = [];
 
@@ -46,135 +42,107 @@ if ($labsResult['success'] && isset($labsResult['data'])) {
         $labs_by_campus[$campus][] = $lab;
     }
 }
-
-// ── Fetch student's recent lab reservations ───────────────────────────────────
-$recentResult   = djangoGet('/api/v1/reservations/my/?type=lab&limit=5&user_id=' . $user_id);
-$recent_rows    = [];
-
-if ($recentResult['success'] && isset($recentResult['data'])) {
-    $recent_rows = $recentResult['data']['results'] ?? $recentResult['data'] ?? [];
-}
 ?>
 
-<h2>Reserve a Lab</h2>
-<?php echo getFlash(); ?>
-
-<div style="max-width:520px; background:#f9f9f9; padding:24px; border-radius:8px; border:1px solid #ddd;">
-    <form method="POST" id="reserveLabForm">
-
-        <div style="margin-bottom:16px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">
-                Select Lab
-            </label>
-            <select name="lab" required style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;">
-                <option value="">-- Choose a Lab --</option>
-                <?php foreach ($labs_by_campus as $campus => $labs): ?>
-                    <optgroup label="── <?php echo htmlspecialchars($campus); ?> ──">
-                        <?php foreach ($labs as $lab): ?>
-                            <option value="<?php echo (int) $lab['id']; ?>">
-                                <?php echo htmlspecialchars($lab['lab_name'] ?? $lab['name'] ?? ''); ?>
-                                <?php echo !empty($lab['total_computers'])
-                                    ? ' (' . (int) $lab['total_computers'] . ' computers)'
-                                    : ''; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </optgroup>
-                <?php endforeach; ?>
-            </select>
-        </div>
-
-        <div style="margin-bottom:16px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">
-                Date
-            </label>
-            <input
-                type="date"
-                name="date"
-                min="<?php echo date('Y-m-d'); ?>"
-                required
-                style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;"
-            >
-        </div>
-
-        <div style="margin-bottom:20px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">
-                Time Slot
-            </label>
-            <select name="time_slot" required style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;">
-                <option value="">-- Choose a Time Slot --</option>
-                <option value="7:30-9:00">7:30 AM – 9:00 AM</option>
-                <option value="9:00-10:30">9:00 AM – 10:30 AM</option>
-                <option value="10:30-12:00">10:30 AM – 12:00 PM</option>
-                <option value="13:00-14:30">1:00 PM – 2:30 PM</option>
-                <option value="14:30-16:00">2:30 PM – 4:00 PM</option>
-            </select>
-        </div>
-
-        <!-- Live availability checker display -->
-        <div id="availabilityMsg" style="
-            display:none; padding:10px 14px;
-            border-radius:5px; margin-bottom:16px; font-size:.9rem;
-        "></div>
-
-        <button
-            name="reserve"
-            type="submit"
-            style="
-                width:100%; padding:12px;
-                background:#2c5f2e; color:white;
-                border:none; border-radius:5px;
-                font-size:1rem; cursor:pointer;
-                transition: background .2s;
-            "
-            onmouseover="this.style.background='#1e3d1a'"
-            onmouseout="this.style.background='#2c5f2e'"
-        >
-            Submit Reservation
-        </button>
-
-    </form>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Reserve a Lab</h1>
+        <p class="page-subtitle">Book a laboratory for your class or study session.</p>
+    </div>
+    <a href="/spacio/frontend/student/my_reservations.php" class="btn btn-secondary">📋 My Reservations</a>
 </div>
 
-<!-- Recent lab reservations -->
-<div style="margin-top:36px;">
-    <h3 style="margin-bottom:12px;">Your Recent Lab Reservations</h3>
+<?php echo getFlash(); ?>
 
-    <?php if (empty($recent_rows)): ?>
-        <p style="color:#888; font-style:italic;">No lab reservations yet.</p>
-    <?php else: ?>
-        <table border="1" cellpadding="10" cellspacing="0"
-               style="border-collapse:collapse; width:100%; max-width:700px;">
-            <thead style="background:#2c5f2e; color:white;">
-                <tr>
-                    <th>Lab</th>
-                    <th>Date</th>
-                    <th>Time Slot</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($recent_rows as $r):
-                $status = $r['status'] ?? 'Pending';
-                $badge  = match($status) {
-                    'Approved' => 'background:#d4edda; color:#155724;',
-                    'Rejected' => 'background:#f8d7da; color:#721c24;',
-                    default    => 'background:#fff3cd; color:#856404;',
-                };
-            ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($r['lab_name'] ?? '—'); ?></td>
-                    <td><?php echo isset($r['date']) ? date("F d, Y", strtotime($r['date'])) : '—'; ?></td>
-                    <td><?php echo htmlspecialchars($r['time_slot'] ?? '—'); ?></td>
-                    <td>
-                        <span style="padding:3px 10px; border-radius:12px; font-size:.82rem; <?php echo $badge; ?>">
-                            <?php echo htmlspecialchars($status); ?>
-                        </span>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
+<div style="max-width:820px; margin:0 auto;">
+
+    <!-- Quick nav cards -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+        <div class="stat-card" style="border:2px solid var(--green-500); background:var(--green-50);">
+            <div class="stat-icon green">🔬</div>
+            <div class="stat-body">
+                <div class="stat-label">Currently Booking</div>
+                <div style="font-size:.85rem; color:var(--green-700); font-weight:600; margin-top:2px;">Lab Reservation</div>
+            </div>
+        </div>
+        <a href="/spacio/frontend/student/reserve_equipment.php" class="stat-card" style="text-decoration:none; transition:box-shadow .15s, transform .15s;" onmouseover="this.style.boxShadow='var(--shadow-md)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+            <div class="stat-icon blue">🖥️</div>
+            <div class="stat-body">
+                <div class="stat-label">Switch to</div>
+                <div style="font-size:.85rem; color:var(--green-600); font-weight:600; margin-top:2px;">Reserve Equipment →</div>
+            </div>
+        </a>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start;">
+
+        <!-- Form Card -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">🔬 New Lab Reservation</span>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="reserveLabForm">
+                    <div class="form-group">
+                        <label class="form-label required">Select Lab</label>
+                        <select name="lab" required class="form-control">
+                            <option value="">-- Choose a Lab --</option>
+                            <?php foreach ($labs_by_campus as $campus => $labs): ?>
+                                <optgroup label="── <?php echo htmlspecialchars($campus); ?> ──">
+                                    <?php foreach ($labs as $lab): ?>
+                                        <option value="<?php echo (int) $lab['id']; ?>">
+                                            <?php echo htmlspecialchars($lab['lab_name'] ?? $lab['name'] ?? ''); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Date</label>
+                        <input type="date" name="date" min="<?php echo date('Y-m-d'); ?>" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Time Slot</label>
+                        <select name="time_slot" required class="form-control">
+                            <option value="">-- Choose a Time Slot --</option>
+                            <option value="7:30-9:00">7:30 AM – 9:00 AM</option>
+                            <option value="9:00-10:30">9:00 AM – 10:30 AM</option>
+                            <option value="10:30-12:00">10:30 AM – 12:00 PM</option>
+                            <option value="13:00-14:30">1:00 PM – 2:30 PM</option>
+                            <option value="14:30-16:00">2:30 PM – 4:00 PM</option>
+                        </select>
+                    </div>
+                    <div id="availabilityMsg" class="availability-msg"></div>
+                    <button name="reserve" type="submit" class="btn btn-primary btn-full">Submit Reservation</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="card">
+                <div class="card-header"><span class="card-title">📌 Guidelines</span></div>
+                <div class="card-body" style="padding-top:12px;">
+                    <ul style="color:var(--gray-600); font-size:.84rem; line-height:2.2; padding-left:16px; margin:0;">
+                        <li>Requires admin approval</li>
+                        <li>Book at least 1 day ahead</li>
+                        <li>Each slot is 1.5 hours</li>
+                        <li>One reservation per slot</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card" style="background:var(--green-50); border-color:var(--green-100);">
+                <div class="card-body" style="text-align:center; padding:20px 16px;">
+                    <div style="font-size:1.6rem; margin-bottom:6px;">📋</div>
+                    <div style="font-weight:600; color:var(--gray-900); margin-bottom:4px; font-size:.88rem;">Track Your Bookings</div>
+                    <div class="text-muted text-small" style="margin-bottom:12px;">View all reservation statuses</div>
+                    <a href="/spacio/frontend/student/my_reservations.php" class="btn btn-primary btn-full btn-sm">My Reservations →</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
 
 <script>
@@ -182,7 +150,6 @@ document.getElementById('reserveLabForm').addEventListener('submit', function (e
     if (!confirm("Submit this lab reservation request?")) e.preventDefault();
 });
 
-// ── Live availability check ───────────────────────────────────────────────────
 const labSelect  = document.querySelector('select[name="lab"]');
 const dateInput  = document.querySelector('input[name="date"]');
 const slotSelect = document.querySelector('select[name="time_slot"]');
@@ -192,33 +159,20 @@ function checkAvailability() {
     const lab  = labSelect.value;
     const date = dateInput.value;
     const slot = slotSelect.value;
-
-    if (!lab || !date || !slot) {
-        msg.style.display = 'none';
-        return;
-    }
-
-    fetch(`/spacio/backend/api/check_availability.php?lab_id=${lab}&date=${date}&time_slot=${encodeURIComponent(slot)}`)
-        .then(res => res.json())
-        .then(data => {
-            msg.style.display = 'block';
-            if (data.available) {
-                msg.style.background = '#d4edda';
-                msg.style.color      = '#155724';
-                msg.style.border     = '1px solid #c3e6cb';
-                msg.textContent      = '✓ This slot is available!';
-            } else {
-                msg.style.background = '#f8d7da';
-                msg.style.color      = '#721c24';
-                msg.style.border     = '1px solid #f5c6cb';
-                msg.textContent      = '✗ This slot is already booked. Please choose another.';
-            }
-        })
-        .catch(() => { msg.style.display = 'none'; });
+    if (!lab || !date || !slot) { msg.className = 'availability-msg'; return; }
+    fetch(`http://localhost:8000/api/v1/availability/labs/?lab_id=${lab}&date=${date}&time_slot=${encodeURIComponent(slot)}`, {
+        headers: { 'Authorization': 'Bearer <?php echo $_SESSION["jwt"] ?? ""; ?>' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        msg.className = 'availability-msg ' + (data.available ? 'available' : 'unavailable');
+        msg.textContent = data.available ? '✓ This slot is available!' : '✗ Already booked. Choose another.';
+    })
+    .catch(() => { msg.className = 'availability-msg'; });
 }
 
-labSelect.addEventListener('change',  checkAvailability);
-dateInput.addEventListener('change',  checkAvailability);
+labSelect.addEventListener('change', checkAvailability);
+dateInput.addEventListener('change', checkAvailability);
 slotSelect.addEventListener('change', checkAvailability);
 </script>
 

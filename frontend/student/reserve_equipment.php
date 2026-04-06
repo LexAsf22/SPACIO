@@ -1,14 +1,18 @@
 <?php
 // frontend/student/reserve_equipment.php
-include("../includes/header.php");
+include_once("../../backend/config/auth.php");
+include_once("../../backend/config/database.php");
+include_once("../../backend/config/helpers.php");
+checkLogin();
 checkRole('student');
 
 $user_id = (int) $_SESSION['user']['id'];
 
-// ── Handle reservation form submission ────────────────────────────────────────
+// ── Handle form submission ────────────────────────────────────────────────────
 if (isset($_POST['reserve'])) {
     $equipment_id = (int)  $_POST['equipment'];
-    $date         =  trim( $_POST['date'] ?? '');
+    $date         = trim(  $_POST['date']      ?? '');
+    $time_slot    = trim(  $_POST['time_slot'] ?? '');
 
     if ($date < date('Y-m-d')) {
         setFlash("Please select a future date.", "error");
@@ -17,15 +21,14 @@ if (isset($_POST['reserve'])) {
             'user_id'      => $user_id,
             'equipment_id' => $equipment_id,
             'date'         => $date,
+            'time_slot'    => $time_slot,
             'type'         => 'equipment',
         ]);
 
         if ($result['success']) {
             setFlash("Equipment reservation submitted! Waiting for admin approval.", "success");
         } else {
-            $msg = $result['data']['detail']
-                ?? $result['data']['message']
-                ?? "Something went wrong. Please try again.";
+            $msg = $result['data']['detail'] ?? $result['data']['message'] ?? "Something went wrong. Please try again.";
             setFlash($msg, "error");
         }
     }
@@ -34,8 +37,8 @@ if (isset($_POST['reserve'])) {
     exit;
 }
 
-// ── Fetch available equipment for dropdown ────────────────────────────────────
-$equipResult    = djangoGet('/api/v1/availability/equipment/');
+// ── Fetch equipment list ──────────────────────────────────────────────────────
+$equipResult     = djangoGet('/api/v1/availability/equipment/list/');
 $equip_by_campus = [];
 
 if ($equipResult['success'] && isset($equipResult['data'])) {
@@ -45,113 +48,119 @@ if ($equipResult['success'] && isset($equipResult['data'])) {
     }
 }
 
-// ── Fetch student's recent equipment reservations ─────────────────────────────
-$recentResult = djangoGet('/api/v1/reservations/my/?type=equipment&limit=5&user_id=' . $user_id);
-$recent_rows  = [];
-
-if ($recentResult['success'] && isset($recentResult['data'])) {
-    $recent_rows = $recentResult['data']['results'] ?? $recentResult['data'] ?? [];
-}
+include("../includes/header.php");
 ?>
 
-<h2>Reserve Equipment</h2>
-<?php echo getFlash(); ?>
-
-<div style="max-width:520px; background:#f9f9f9; padding:24px; border-radius:8px; border:1px solid #ddd;">
-    <form method="POST" id="reserveEqForm">
-
-        <div style="margin-bottom:16px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">
-                Select Equipment
-            </label>
-            <select name="equipment" required style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;">
-                <option value="">-- Choose Equipment --</option>
-                <?php foreach ($equip_by_campus as $campus => $items): ?>
-                    <optgroup label="── <?php echo htmlspecialchars($campus); ?> ──">
-                        <?php foreach ($items as $e): ?>
-                            <option value="<?php echo (int) $e['id']; ?>">
-                                <?php echo htmlspecialchars($e['equipment_name'] ?? $e['name'] ?? ''); ?>
-                                — <?php echo htmlspecialchars($e['lab_name'] ?? ''); ?>
-                                (<?php echo (int) ($e['quantity'] ?? 0); ?> available)
-                            </option>
-                        <?php endforeach; ?>
-                    </optgroup>
-                <?php endforeach; ?>
-            </select>
-        </div>
-
-        <div style="margin-bottom:20px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">
-                Date Needed
-            </label>
-            <input
-                type="date"
-                name="date"
-                min="<?php echo date('Y-m-d'); ?>"
-                required
-                style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;"
-            >
-        </div>
-
-        <button
-            name="reserve"
-            type="submit"
-            style="
-                width:100%; padding:12px;
-                background:#2c5f2e; color:white;
-                border:none; border-radius:5px;
-                font-size:1rem; cursor:pointer;
-                transition: background .2s;
-            "
-            onmouseover="this.style.background='#1e3d1a'"
-            onmouseout="this.style.background='#2c5f2e'"
-        >
-            Submit Reservation
-        </button>
-
-    </form>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Reserve Equipment</h1>
+        <p class="page-subtitle">Borrow equipment for your academic needs.</p>
+    </div>
+    <a href="/spacio/frontend/student/my_reservations.php" class="btn btn-secondary">📋 My Reservations</a>
 </div>
 
-<!-- Recent equipment reservations -->
-<div style="margin-top:36px;">
-    <h3 style="margin-bottom:12px;">Your Recent Equipment Reservations</h3>
+<?php echo getFlash(); ?>
 
-    <?php if (empty($recent_rows)): ?>
-        <p style="color:#888; font-style:italic;">No equipment reservations yet.</p>
-    <?php else: ?>
-        <table border="1" cellpadding="10" cellspacing="0"
-               style="border-collapse:collapse; width:100%; max-width:700px;">
-            <thead style="background:#2c5f2e; color:white;">
-                <tr>
-                    <th>Equipment</th>
-                    <th>Lab</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($recent_rows as $r):
-                $status = $r['status'] ?? 'Pending';
-                $badge  = match($status) {
-                    'Approved' => 'background:#d4edda; color:#155724;',
-                    'Rejected' => 'background:#f8d7da; color:#721c24;',
-                    default    => 'background:#fff3cd; color:#856404;',
-                };
-            ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($r['equipment_name'] ?? '—'); ?></td>
-                    <td><?php echo htmlspecialchars($r['lab_name']       ?? '—'); ?></td>
-                    <td><?php echo isset($r['date']) ? date("F d, Y", strtotime($r['date'])) : '—'; ?></td>
-                    <td>
-                        <span style="padding:3px 10px; border-radius:12px; font-size:.82rem; <?php echo $badge; ?>">
-                            <?php echo htmlspecialchars($status); ?>
-                        </span>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
+<div style="max-width:820px; margin:0 auto;">
+
+    <!-- Quick nav cards -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+        <a href="/spacio/frontend/student/reserve_lab.php" class="stat-card" style="text-decoration:none; transition:box-shadow .15s, transform .15s;" onmouseover="this.style.boxShadow='var(--shadow-md)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+            <div class="stat-icon green">🔬</div>
+            <div class="stat-body">
+                <div class="stat-label">Switch to</div>
+                <div style="font-size:.85rem; color:var(--green-600); font-weight:600; margin-top:2px;">Reserve a Lab →</div>
+            </div>
+        </a>
+        <div class="stat-card" style="border:2px solid var(--green-500); background:var(--green-50);">
+            <div class="stat-icon blue">🖥️</div>
+            <div class="stat-body">
+                <div class="stat-label">Currently Booking</div>
+                <div style="font-size:.85rem; color:var(--green-700); font-weight:600; margin-top:2px;">Equipment Reservation</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start;">
+
+        <!-- Form Card -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">🖥️ New Equipment Reservation</span>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="reserveEqForm">
+
+                    <div class="form-group">
+                        <label class="form-label required">Select Equipment</label>
+                        <select name="equipment" required class="form-control">
+                            <option value="">-- Choose Equipment --</option>
+                            <?php foreach ($equip_by_campus as $campus => $items): ?>
+                                <optgroup label="── <?php echo htmlspecialchars($campus); ?> ──">
+                                    <?php foreach ($items as $e): ?>
+                                        <option value="<?php echo (int)$e['id']; ?>">
+                                            <?php echo htmlspecialchars($e['equipment_name'] ?? ''); ?>
+                                            — <?php echo htmlspecialchars($e['lab_name'] ?? ''); ?>
+                                            (<?php echo (int)($e['quantity'] ?? 0); ?> available)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required">Date Needed</label>
+                        <input type="date" name="date" min="<?php echo date('Y-m-d'); ?>"
+                               required class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required">Time Slot</label>
+                        <select name="time_slot" required class="form-control">
+                            <option value="">-- Choose a Time Slot --</option>
+                            <option value="7:30-9:00">7:30 AM – 9:00 AM</option>
+                            <option value="9:00-10:30">9:00 AM – 10:30 AM</option>
+                            <option value="10:30-12:00">10:30 AM – 12:00 PM</option>
+                            <option value="13:00-14:30">1:00 PM – 2:30 PM</option>
+                            <option value="14:30-16:00">2:30 PM – 4:00 PM</option>
+                        </select>
+                    </div>
+
+                    <button name="reserve" type="submit" class="btn btn-primary btn-full">
+                        Submit Reservation
+                    </button>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="card">
+                <div class="card-header"><span class="card-title">📌 Guidelines</span></div>
+                <div class="card-body" style="padding-top:12px;">
+                    <ul style="color:var(--ink-500); font-size:.84rem; line-height:2.2; padding-left:16px; margin:0;">
+                        <li>Requires admin approval</li>
+                        <li>Return equipment same day</li>
+                        <li>Handle with care</li>
+                        <li>Report damage immediately</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card" style="background:var(--green-50); border-color:var(--green-100);">
+                <div class="card-body" style="text-align:center; padding:20px 16px;">
+                    <div style="font-size:1.6rem; margin-bottom:6px;">📋</div>
+                    <div style="font-weight:600; color:var(--ink-900); margin-bottom:4px; font-size:.88rem;">Track Your Bookings</div>
+                    <div class="text-muted text-small" style="margin-bottom:12px;">View all reservation statuses</div>
+                    <a href="/spacio/frontend/student/my_reservations.php" class="btn btn-primary btn-full btn-sm">
+                        My Reservations →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
 
 <script>

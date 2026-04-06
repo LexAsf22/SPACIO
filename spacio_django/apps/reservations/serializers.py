@@ -21,6 +21,10 @@ class ReservationSerializer(serializers.ModelSerializer):
 
 
 class ReservationCreateSerializer(serializers.ModelSerializer):
+    time_slot    = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    lab_id       = serializers.IntegerField(required=False, allow_null=True)
+    equipment_id = serializers.IntegerField(required=False, allow_null=True)
+
     class Meta:
         model  = Reservation
         fields = ["user_id", "lab_id", "equipment_id", "date", "time_slot"]

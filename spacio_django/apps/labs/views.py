@@ -43,7 +43,7 @@ class EquipmentListView(APIView):
     def get(self, request):
         queryset   = Equipment.objects.select_related("lab").all()
         search     = request.query_params.get("search",     "")
-        lab_filter = request.query_params.get("lab_filter", 0)
+        lab_filter = int(request.query_params.get("lab_filter", 0))
         per_page   = int(request.query_params.get("per_page", 10))
         page       = int(request.query_params.get("page",     1))
 

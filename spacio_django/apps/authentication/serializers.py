@@ -43,12 +43,15 @@ class LoginSerializer(serializers.Serializer):
 
         try:
             import bcrypt
-            password_valid = bcrypt.checkpw(
-                password.encode("utf-8"),
-                stored_hash.encode("utf-8")
-            )
-        except ImportError:
-            # Fallback for Django-hashed passwords (created via register API)
+            if stored_hash.startswith("$2"):
+                password_valid = bcrypt.checkpw(
+                    password.encode("utf-8"),
+                    stored_hash.encode("utf-8")
+                )
+            else:
+                # Django-hashed password (created via register API)
+                password_valid = check_password(password, user.password)
+        except (ImportError, ValueError):
             password_valid = check_password(password, user.password)
 
         if not password_valid:

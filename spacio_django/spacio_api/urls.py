@@ -6,10 +6,12 @@ Root URL configuration — all API routes live under /api/v1/
 from django.contrib import admin
 from django.urls    import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework_simplejwt.views import TokenRefreshView
 
-from apps.reservations.views import AdminStatsView
+from apps.reservations.views import AdminStatsView, StudentDashboardView
 from apps.reservations.urls  import admin_urlpatterns
 from apps.reports.urls       import teacher_urlpatterns
+from apps.labs.views import EquipmentListView, EquipmentDetailView
 
 urlpatterns = [
 
@@ -18,6 +20,7 @@ urlpatterns = [
 
     # ── Authentication ─────────────────────────────────────────────────────────
     path("api/v1/auth/",         include("apps.authentication.urls")),
+    path("api/v1/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
 
     # ── Reservations ───────────────────────────────────────────────────────────
     path("api/v1/reservations/", include("apps.reservations.urls")),
@@ -41,9 +44,11 @@ urlpatterns = [
 
     # GET /api/v1/admin/stats/                dashboard counts
     path("api/v1/admin/stats/",      AdminStatsView.as_view(), name="admin-stats"),
+    path("api/v1/student/dashboard/", StudentDashboardView.as_view(), name="student-dashboard"),
 
     # GET/POST /api/v1/admin/inventory/       reuse labs equipment endpoints
-    path("api/v1/admin/inventory/",  include("apps.labs.urls")),
+    path("api/v1/admin/inventory/",          EquipmentListView.as_view(),  name="admin-inventory-list"),
+path("api/v1/admin/inventory/<int:pk>/", EquipmentDetailView.as_view(), name="admin-inventory-detail"),
 
     # ── Teacher routes ─────────────────────────────────────────────────────────
     # GET /api/v1/teacher/stats/

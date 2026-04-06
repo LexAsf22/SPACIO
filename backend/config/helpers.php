@@ -92,6 +92,39 @@ function buildDjangoHeaders() {
 }
 
 /**
+ * Refresh the JWT access token using the stored refresh token.
+ */
+function refreshJwtToken() {
+    $refresh = $_SESSION['jwt_refresh'] ?? null;
+    if (!$refresh) return false;
+
+    $url  = getDjangoBaseUrl() . '/api/v1/auth/refresh/';
+    $body = json_encode(['refresh' => $refresh]);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $body,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_TIMEOUT        => 10,
+    ]);
+
+    $response   = curl_exec($ch);
+    $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($statusCode === 200) {
+        $data = json_decode($response, true);
+        $_SESSION['jwt']         = $data['access'];
+        $_SESSION['jwt_refresh'] = $data['refresh'] ?? $refresh;
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * Send a GET request to the Django API.
  *
  * @param  string $endpoint  e.g. '/api/v1/availability/labs/'
@@ -115,6 +148,18 @@ function djangoGet($endpoint) {
     if ($curlError) {
         error_log("Django GET error [{$endpoint}]: {$curlError}");
         return ['success' => false, 'data' => null, 'status' => 0, 'error' => $curlError];
+    }
+
+    if ($statusCode === 401 && refreshJwtToken()) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => buildDjangoHeaders(),
+            CURLOPT_TIMEOUT        => 10,
+        ]);
+        $response   = curl_exec($ch);
+        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
     }
 
     $decoded = json_decode($response, true);

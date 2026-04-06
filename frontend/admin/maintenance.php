@@ -1,6 +1,9 @@
 <?php
 // frontend/admin/maintenance.php
-include("../includes/header.php");
+include_once("../../backend/config/auth.php");
+include_once("../../backend/config/database.php");
+include_once("../../backend/config/helpers.php");
+checkLogin();
 checkRole('admin');
 
 // ── Status update ─────────────────────────────────────────────────────────────
@@ -36,6 +39,8 @@ $issues = [];
 if ($result['success'] && isset($result['data'])) {
     $issues = $result['data']['results'] ?? $result['data'] ?? [];
 }
+
+include("../includes/header.php");
 ?>
 
 <style>

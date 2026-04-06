@@ -22,9 +22,11 @@ class ReservationListView(APIView):
 
     def post(self, request):
         """Create a new reservation — called by reserve_lab.php / reserve_equipment.php."""
-        serializer = ReservationCreateSerializer(data=request.data)
+        user_id = request.data.get("user_id") or request.user.id
+        data = {**request.data, "user_id": user_id}
+        serializer = ReservationCreateSerializer(data=data)
         if serializer.is_valid():
-            reservation = serializer.save()
+            reservation = serializer.save(user_id=user_id)
             return Response(
                 ReservationSerializer(reservation).data,
                 status=status.HTTP_201_CREATED,
@@ -104,6 +106,44 @@ class ApprovalActionView(APIView):
             "message": f"Reservation {reservation.status.lower()} successfully.",
             "id":      reservation.id,
             "status":  reservation.status,
+        })
+
+
+# ── GET /api/v1/student/dashboard/ ───────────────────────────────────────────
+class StudentDashboardView(APIView):
+    """Dashboard stats for the student — available labs, active reservations, upcoming."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.labs.models import Laboratory
+        from django.utils import timezone
+
+        user_id = request.query_params.get("user_id") or request.user.id
+        today   = timezone.now().date()
+
+        available_labs      = Laboratory.objects.filter(status="Available").count()
+        active_reservations = Reservation.objects.filter(
+            user_id=user_id, status__iexact="Approved"
+        ).count()
+
+        upcoming = Reservation.objects.select_related("lab", "equipment").filter(
+            user_id=user_id
+        ).order_by("-date")[:5]
+
+        rows = []
+        for r in upcoming:
+            rows.append({
+                "lab":       r.lab.lab_name if r.lab else "—",
+                "equipment": r.equipment.equipment_name if r.equipment else "—",
+                "date":      r.date.strftime("%B %d, %Y") if r.date else "—",
+                "time":      r.time_slot or "N/A",
+                "status":    r.status,
+            })
+
+        return Response({
+            "available_labs":        available_labs,
+            "active_reservations":   active_reservations,
+            "upcoming_reservations": rows,
         })
 
 

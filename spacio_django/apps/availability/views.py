@@ -101,3 +101,27 @@ class AvailableSlotsView(APIView):
             "available_slots": available,
             "booked_slots":    list(booked),
         })
+
+# ── GET /api/v1/availability/equipment/list/ ─────────────────────────────────
+class EquipmentListAvailabilityView(APIView):
+    """Returns all available equipment for the reservation dropdown."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        equipment = Equipment.objects.select_related("lab").filter(
+            status="Available"
+        ).order_by("lab__lab_name", "equipment_name")
+
+        results = [
+            {
+                "id":             e.id,
+                "equipment_name": e.equipment_name,
+                "lab_name":       e.lab.lab_name if e.lab else "—",
+                "campus":         e.lab.campus   if e.lab else "Other",
+                "quantity":       e.quantity,
+                "status":         e.status,
+            }
+            for e in equipment
+        ]
+
+        return Response(results)

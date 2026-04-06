@@ -1,6 +1,11 @@
 <?php
 // frontend/teacher/report_issue.php
-include("../includes/header.php");
+
+// ── ALL logic BEFORE any HTML output ─────────────────────────
+include_once("../../backend/config/auth.php");
+include_once("../../backend/config/database.php");
+include_once("../../backend/config/helpers.php");
+checkLogin();
 checkRole('teacher');
 
 if (isset($_POST['report'])) {
@@ -11,8 +16,7 @@ if (isset($_POST['report'])) {
     $priority    =       $_POST['priority']    ?? '';
     $user_id     = (int) $_SESSION['user']['id'];
 
-    // ── Validate allowed values (keep PHP-side validation — catches bad input before hitting Django) ──
-    $allowed_campuses   = ['Campus A', 'Campus B'];
+    $allowed_campuses   = ['CLI', 'CHS'];
     $allowed_categories = ['Equipment', 'Facility', 'Software'];
     $allowed_priorities = ['Low', 'Medium', 'High'];
 
@@ -25,8 +29,6 @@ if (isset($_POST['report'])) {
     } elseif (empty($room)) {
         setFlash("Room / Lab field is required.", "error");
     } else {
-
-        // ── Call Django issues API ──
         $result = djangoPost('/api/v1/issues/', [
             'user_id'     => $user_id,
             'campus'      => $campus,
@@ -50,100 +52,89 @@ if (isset($_POST['report'])) {
     header("Location: " . $_SERVER['PHP_SELF']);
     exit;
 }
+
+// ── HTML output starts here ───────────────────────────────────
+include("../includes/header.php");
 ?>
 
-<h2>Report a Classroom / Lab Issue</h2>
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Report an Issue</h1>
+        <p class="page-subtitle">Submit a classroom or lab problem for admin review</p>
+    </div>
+</div>
+
 <?php echo getFlash(); ?>
 
-<div style="max-width:520px; background:#f9f9f9; padding:24px; border-radius:8px; border:1px solid #ddd;">
-    <form method="POST" id="issueForm">
-
-        <div style="margin-bottom:16px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">Campus</label>
-            <select name="campus" required style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;">
-                <option value="">-- Select Campus --</option>
-                <option value="Campus A">Campus A</option>
-                <option value="Campus B">Campus B</option>
-            </select>
+<div style="max-width: 560px; margin: 0 auto;">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Issue Details</span>
         </div>
+        <div class="card-body">
+            <form method="POST" id="issueForm">
 
-        <div style="margin-bottom:16px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">Room / Lab</label>
-            <input
-                type="text"
-                name="room"
-                placeholder="e.g. Room 201, Lab 3"
-                required
-                style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;"
-            >
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                    <div class="form-group">
+                        <label class="form-label required">Campus</label>
+                        <select name="campus" class="form-control" required>
+                            <option value="">— Select Campus —</option>
+                            <option value="CLI">CLI</option>
+                            <option value="CHS">CHS</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Room / Lab</label>
+                        <input type="text" name="room" class="form-control"
+                               placeholder="e.g. Room 201, Lab 3" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Category</label>
+                    <select name="category" class="form-control" required>
+                        <option value="">— Select Category —</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Facility">Facility</option>
+                        <option value="Software">Software</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Description</label>
+                    <textarea name="description" class="form-control"
+                              rows="4" placeholder="Describe the issue in detail..." required></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom:24px;">
+                    <label class="form-label required">Priority</label>
+                    <div class="priority-group">
+                        <div class="priority-option low">
+                            <input type="radio" name="priority" id="pLow" value="Low" required>
+                            <label class="priority-label" for="pLow">Low</label>
+                        </div>
+                        <div class="priority-option med">
+                            <input type="radio" name="priority" id="pMed" value="Medium">
+                            <label class="priority-label" for="pMed">Medium</label>
+                        </div>
+                        <div class="priority-option high">
+                            <input type="radio" name="priority" id="pHigh" value="High">
+                            <label class="priority-label" for="pHigh">High</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button name="report" type="submit" class="btn btn-primary btn-full">
+                    Submit Report
+                </button>
+
+            </form>
         </div>
-
-        <div style="margin-bottom:16px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">Category</label>
-            <select name="category" required style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;">
-                <option value="">-- Select Category --</option>
-                <option value="Equipment">Equipment</option>
-                <option value="Facility">Facility</option>
-                <option value="Software">Software</option>
-            </select>
-        </div>
-
-        <div style="margin-bottom:16px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">Description</label>
-            <textarea
-                name="description"
-                rows="4"
-                placeholder="Describe the issue in detail..."
-                required
-                style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc; resize:vertical;"
-            ></textarea>
-        </div>
-
-        <div style="margin-bottom:20px;">
-            <label style="display:block; font-weight:bold; margin-bottom:6px;">Priority</label>
-            <div style="display:flex; gap:12px;">
-                <?php foreach (['Low' => '#28a745', 'Medium' => '#f39c12', 'High' => '#e74c3c'] as $level => $color): ?>
-                <label style="flex:1; text-align:center; cursor:pointer;">
-                    <input type="radio" name="priority" value="<?php echo $level; ?>" required
-                           style="display:none;" class="priorityRadio">
-                    <span class="priorityBtn" data-value="<?php echo $level; ?>" style="
-                        display:block; padding:10px; border-radius:5px;
-                        border:2px solid <?php echo $color; ?>;
-                        color:<?php echo $color; ?>;
-                        font-weight:bold;
-                        transition: all .2s;
-                    ">
-                        <?php echo $level; ?>
-                    </span>
-                </label>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-        <button
-            name="report"
-            type="submit"
-            style="width:100%; padding:12px; background:#2c5f2e; color:white; border:none; border-radius:5px; font-size:1rem; cursor:pointer;"
-        >
-            Submit Report
-        </button>
-
-    </form>
+    </div>
 </div>
 
 <script>
-document.querySelectorAll('.priorityRadio').forEach(radio => {
-    radio.addEventListener('change', function () {
-        document.querySelectorAll('.priorityBtn').forEach(btn => {
-            btn.style.background = 'white';
-            btn.style.color      = btn.style.borderColor;
-        });
-        const btn        = this.nextElementSibling;
-        btn.style.background = btn.style.borderColor;
-        btn.style.color      = 'white';
-    });
-});
-
 document.getElementById('issueForm').addEventListener('submit', function (e) {
     if (!confirm("Submit this issue report?")) e.preventDefault();
 });

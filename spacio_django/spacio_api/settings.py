@@ -4,13 +4,11 @@ Spacio — Django Settings
 """
 
 import os
-import pymysql
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 
 # ── PyMySQL as MySQL driver (for XAMPP on Windows) ────────────────────────────
-pymysql.install_as_MySQLdb()
 
 # ── Load .env file ─────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,7 +41,7 @@ INSTALLED_APPS = [
     "apps.availability",
     "apps.issues",
     "apps.reports",
-    "apps.labs",
+    "apps.labs"
 ]
 
 # ── Middleware ─────────────────────────────────────────────────────────────────
@@ -92,7 +90,7 @@ DATABASES = {
             "charset":  "utf8mb4",
             "sql_mode": "STRICT_TRANS_TABLES",
         },
-    }
+    }   
 }
 
 # ── Custom user model ──────────────────────────────────────────────────────────

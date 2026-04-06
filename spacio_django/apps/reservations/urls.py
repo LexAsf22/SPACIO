@@ -8,6 +8,7 @@ from apps.reservations.views import (
     PendingApprovalsView,
     ApprovalActionView,
     AdminStatsView,
+    StudentDashboardView,
 )
 
 urlpatterns = [

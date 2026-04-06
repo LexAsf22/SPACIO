@@ -17,7 +17,9 @@ class Issue(models.Model):
         db_column    = "user_id",
         related_name = "issues",
     )
-    campus      = models.CharField(max_length=255)
+    CAMPUS_CHOICES = [("CLI", "CLI"), ("CHS", "CHS")]
+
+    campus      = models.CharField(max_length=3, choices=CAMPUS_CHOICES)
     room        = models.CharField(max_length=255)
     category    = models.CharField(max_length=50,  choices=CATEGORY_CHOICES)
     description = models.TextField(blank=True, default="")

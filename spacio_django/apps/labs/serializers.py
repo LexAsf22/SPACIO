@@ -12,6 +12,7 @@ class LaboratorySerializer(serializers.ModelSerializer):
 
 class EquipmentSerializer(serializers.ModelSerializer):
     lab_name = serializers.CharField(source="lab.lab_name", read_only=True)
+    lab_id   = serializers.IntegerField()
 
     class Meta:
         model  = Equipment

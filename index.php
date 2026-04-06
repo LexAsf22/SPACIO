@@ -1,13 +1,13 @@
 <?php
 session_start();
 if(isset($_SESSION['user'])){
-    $role = $_SESSION['user']['role'];
-    $dashboards = [
-        'student' => 'frontend/student/dashboard.php',
-        'teacher' => 'frontend/teacher/dashboard.php',
-        'admin'   => 'frontend/admin/dashboard.php',
-    ];
-    header("Location: " . ($dashboards[$role] ?? 'login.php'));
+    $role = strtolower($_SESSION['user']['role']); // normalize — Django may return 'Student' or 'student'
+$dashboards = [
+    'student' => '/spacio/frontend/student/dashboard.php',
+    'teacher' => '/spacio/frontend/teacher/dashboard.php',
+    'admin'   => '/spacio/frontend/admin/dashboard.php',
+];
+header("Location: " . ($dashboards[$role] ?? '/spacio/login.php'));
     exit;
 }
 ?>
