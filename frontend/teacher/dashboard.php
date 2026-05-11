@@ -195,6 +195,13 @@ include("../includes/header.php");
             <div class="text-muted text-small">Track your reported issues</div>
         </div>
     </a>
+    <a href="/spacio/frontend/teacher/reservation_history.php" class="quick-action-btn">
+        <div class="quick-action-icon">🕓</div>
+        <div>
+            <div style="font-weight:600; margin-bottom:2px;">Reservation History</div>
+            <div class="text-muted text-small">View all student reservations</div>
+        </div>
+    </a>
 </div>
 
 <script>

@@ -24,6 +24,7 @@ $equipment = array_filter($reservations, fn($r) => empty($r['lab_id']));
         <p class="page-subtitle">All your lab and equipment bookings in one place.</p>
     </div>
     <div style="display:flex; gap:8px;">
+        <a href="/spacio/frontend/student/reservation_history.php" class="btn btn-secondary">🕓 History</a>
         <a href="/spacio/frontend/student/reserve_lab.php" class="btn btn-secondary">+ Reserve Lab</a>
         <a href="/spacio/frontend/student/reserve_equipment.php" class="btn btn-primary">+ Reserve Equipment</a>
     </div>

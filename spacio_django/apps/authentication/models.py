@@ -27,7 +27,6 @@ class SpacioUser(AbstractBaseUser, PermissionsMixin):
         ("admin", "Admin"),
     ]
 
-    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     school_id = models.CharField(max_length=100, unique=True)
     email = models.EmailField(unique=True)

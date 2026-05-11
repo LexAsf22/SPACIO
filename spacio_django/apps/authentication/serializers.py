@@ -1,4 +1,6 @@
 # apps/authentication/serializers.py
+# MODIFIED: Added agreed_to_terms field to RegisterSerializer
+# Lines marked [NEW] are additions to the original file.
 
 from rest_framework import serializers
 from django.contrib.auth.hashers import check_password, make_password
@@ -18,7 +20,6 @@ class LoginSerializer(serializers.Serializer):
         email    = data.get("email", "").strip()
         password = data.get("password", "")
 
-        # Find user by email
         try:
             user = SpacioUser.objects.get(email=email)
         except SpacioUser.DoesNotExist:
@@ -31,9 +32,6 @@ class LoginSerializer(serializers.Serializer):
                 {"detail": "This account has been deactivated."}
             )
 
-        # ── PHP bcrypt compatibility ───────────────────────────────────────────
-        # PHP uses $2y$, Python bcrypt uses $2b$ — they are identical algorithms.
-        # We convert the prefix before checking.
         stored_hash = user.password
 
         if stored_hash.startswith("$2y$"):
@@ -49,7 +47,6 @@ class LoginSerializer(serializers.Serializer):
                     stored_hash.encode("utf-8")
                 )
             else:
-                # Django-hashed password (created via register API)
                 password_valid = check_password(password, user.password)
         except (ImportError, ValueError):
             password_valid = check_password(password, user.password)
@@ -68,12 +65,36 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(write_only=True, min_length=8)
 
+    # [NEW] ── Terms & Conditions field ──────────────────────────────────────
+    # write_only=True: we accept it on input but never expose it in responses.
+    # It is NOT stored in the database (SpacioUser.managed=False, no column).
+    # We validate it here and stamp agreed_to_terms_at in views.py.
+    agreed_to_terms = serializers.BooleanField(
+        write_only=True,
+        required=True,
+        error_messages={
+            'required': 'You must agree to the Terms & Conditions and Data Privacy Policy.',
+            'invalid':  'You must agree to the Terms & Conditions and Data Privacy Policy.',
+        }
+    )
+    # ─────────────────────────────────────────────────────────────────────────
+
     class Meta:
         model  = SpacioUser
         fields = [
             "name", "school_id", "email", "password",
             "role", "campus", "course", "department",
+            "agreed_to_terms",  # [NEW]
         ]
+
+    # [NEW] ── Validate agreed_to_terms must be True (not just present) ──────
+    def validate_agreed_to_terms(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                "You must accept the Terms & Conditions and Data Privacy Policy to register."
+            )
+        return value
+    # ─────────────────────────────────────────────────────────────────────────
 
     def validate_email(self, value):
         if SpacioUser.objects.filter(email=value).exists():
@@ -92,8 +113,36 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        validated_data.pop("agreed_to_terms", None)
         validated_data["password"] = make_password(validated_data["password"])
-        return SpacioUser.objects.create(**validated_data)
+
+        # Use raw INSERT to avoid Django generating RETURNING `id`
+        # which MariaDB does not support.
+        from django.db import connection
+
+        fields = ["name", "school_id", "email", "password",
+                  "role", "campus", "course", "department",
+                  "is_active", "is_staff", "is_superuser"]
+
+        validated_data.setdefault("is_active",    True)
+        validated_data.setdefault("is_staff",     False)
+        validated_data.setdefault("is_superuser", False)
+        validated_data.setdefault("course",       "")
+        validated_data.setdefault("department",   "")
+        validated_data.setdefault("campus",       "")
+
+        columns = ", ".join(f"`{f}`" for f in fields)
+        placeholders = ", ".join(["%s"] * len(fields))
+        values = [validated_data[f] for f in fields]
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"INSERT INTO `users` ({columns}) VALUES ({placeholders})",
+                values,
+            )
+            user_id = cursor.lastrowid
+
+        return SpacioUser.objects.get(pk=user_id)
 
 
 class UserSerializer(serializers.ModelSerializer):

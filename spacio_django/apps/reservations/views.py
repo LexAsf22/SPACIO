@@ -147,6 +147,19 @@ class StudentDashboardView(APIView):
         })
 
 
+# ── GET /api/v1/reservations/history/ ────────────────────────────────────────
+class ReservationHistoryView(APIView):
+    """Full history for admin, or filtered by user_id for student/teacher."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user_id = request.query_params.get("user_id")
+        qs = Reservation.objects.select_related("user", "lab", "equipment").order_by("-date", "-id")
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        return Response(ReservationSerializer(qs, many=True).data)
+
+
 # ── GET /api/v1/admin/stats/ ──────────────────────────────────────────────────
 class AdminStatsView(APIView):
     """Dashboard counts — total reservations, pending, total issues."""

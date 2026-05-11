@@ -1,5 +1,7 @@
 <?php
 // register.php (root)
+// MODIFIED: Added agreed_to_terms checkbox + validation
+// Diff from original: lines marked with [NEW] are additions
 require_once "backend/config/database.php";
 require_once "backend/config/helpers.php";
 require_once "backend/config/auth.php";
@@ -33,6 +35,12 @@ if (isset($_POST['register'])) {
     if ($role === 'student' && empty($course))              $errorFields['course']    = "Course is required for students.";
     if ($role === 'teacher' && empty($department))          $errorFields['department']= "Department is required for teachers.";
 
+    // [NEW] ── Terms & Conditions validation ──────────────────────────────────
+    if (empty($_POST['agreed_to_terms'])) {
+        $errorFields['agreed_to_terms'] = "You must agree to the Terms &amp; Conditions and Data Privacy Policy to register.";
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     // ── Call Django register API if validation passes ──
     if (empty($errorFields)) {
 
@@ -45,6 +53,8 @@ if (isset($_POST['register'])) {
             'campus'     => $campus,
             'course'     => $course,
             'department' => $department,
+            // [NEW] pass agreed_to_terms to Django for server-side audit log
+            'agreed_to_terms' => true,
         ]);
 
         if ($result['success']) {
@@ -57,7 +67,7 @@ if (isset($_POST['register'])) {
             $data = $result['data'] ?? [];
 
             // Django REST Framework returns field errors as arrays e.g. {"email": ["already exists"]}
-            $fieldMap = ['name','school_id','email','password','role','campus','course','department'];
+            $fieldMap = ['name','school_id','email','password','role','campus','course','department','agreed_to_terms'];
             foreach ($fieldMap as $field) {
                 if (!empty($data[$field])) {
                     $errorFields[$field] = is_array($data[$field])
@@ -497,6 +507,90 @@ function fieldClass(array $err, string $key): string {
             letter-spacing: .1em; text-transform: uppercase;
         }
 
+        /* [NEW] ── Terms & Conditions Checkbox ────────────────────────────── */
+        .tc-divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 8px 0 20px;
+        }
+
+        .tc-divider hr { flex: 1; border: none; border-top: 1px solid rgba(255,255,255,.07); }
+
+        .tc-divider span {
+            font-family: 'Syne', sans-serif;
+            font-size: .65rem; color: rgba(255,255,255,.2);
+            letter-spacing: .1em; text-transform: uppercase;
+        }
+
+        .tc-group {
+            margin-bottom: 20px;
+        }
+
+        .tc-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: rgba(255,255,255,.04);
+            border: 1.5px solid rgba(255,255,255,.08);
+            border-radius: 10px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+        }
+
+        /* Highlight box when there's an error */
+        .tc-box.has-error {
+            border-color: rgba(248,113,113,.45);
+            background: rgba(248,113,113,.05);
+        }
+
+        /* Highlight box when checked */
+        .tc-box.is-checked {
+            border-color: rgba(116,187,122,.4);
+            background: rgba(116,187,122,.05);
+        }
+
+        .tc-checkbox {
+            width: 17px;
+            height: 17px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            accent-color: var(--sprout);
+            cursor: pointer;
+        }
+
+        .tc-label-text {
+            font-size: .85rem;
+            line-height: 1.6;
+            color: rgba(255,255,255,.55);
+        }
+
+        .tc-label-text a {
+            color: var(--sprout);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            font-style: normal;
+            font-family: 'Syne', sans-serif;
+            font-size: .8rem;
+            font-weight: 700;
+            transition: color .2s;
+        }
+
+        .tc-label-text a:hover { color: var(--mist); }
+
+        .tc-hint {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 18px;
+            font-size: .73rem;
+            color: var(--red);
+            font-style: italic;
+            margin-top: 7px;
+            padding-left: 2px;
+            line-height: 1.4;
+        }
+        /* ─────────────────────────────────────────────────────────────────── */
+
         .btn-submit {
             width: 100%;
             padding: 15px;
@@ -560,6 +654,25 @@ function fieldClass(array $err, string $key): string {
         .footer-copy { font-size: .7rem; color: rgba(255,255,255,.18); letter-spacing: .06em; }
         .footer-copy strong { color: rgba(185,222,187,.35); font-weight: 500; }
 
+        /* [NEW] footer T&C links */
+        .footer-links {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .footer-links a {
+            font-family: 'Syne', sans-serif;
+            font-size: .65rem; font-weight: 600;
+            letter-spacing: .08em; text-transform: uppercase;
+            color: rgba(255,255,255,.2);
+            text-decoration: none;
+            transition: color .2s;
+        }
+
+        .footer-links a:hover { color: rgba(255,255,255,.5); }
+        .footer-links span { color: rgba(255,255,255,.1); }
+
         @media (max-width: 900px) {
             .page-wrap { grid-template-columns: 1fr; }
             .panel-left { display: none; }
@@ -621,6 +734,13 @@ function fieldClass(array $err, string $key): string {
             </div>
             <div class="step">
                 <div class="step-num">3</div>
+                <div class="step-body">
+                    <div class="step-title">Agree to Terms</div>
+                    <div class="step-desc">Read and accept the Terms &amp; Conditions and Data Privacy Policy.</div>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
                 <div class="step-body">
                     <div class="step-title">Start using Spacio</div>
                     <div class="step-desc">Reserve labs, track equipment, and report issues — instantly.</div>
@@ -773,6 +893,45 @@ function fieldClass(array $err, string $key): string {
                     <div class="field-hint"><?= $errorFields['department'] ?? '' ?></div>
                 </div>
 
+                <!-- [NEW] ── Terms & Conditions Checkbox ──────────────────── -->
+                <div class="tc-divider">
+                    <hr><span>Agreement</span><hr>
+                </div>
+
+                <div class="tc-group">
+                    <label class="tc-box <?= !empty($errorFields['agreed_to_terms']) ? 'has-error' : '' ?> <?= !empty($_POST['agreed_to_terms']) ? 'is-checked' : '' ?>"
+                           id="tcBox"
+                           for="agreed_to_terms">
+                        <input
+                            type="checkbox"
+                            class="tc-checkbox"
+                            id="agreed_to_terms"
+                            name="agreed_to_terms"
+                            value="1"
+                            <?= !empty($_POST['agreed_to_terms']) ? 'checked' : '' ?>
+                        >
+                        <span class="tc-label-text">
+                            I have read and agree to SPACIO&rsquo;s
+                            <a href="/spacio/terms.php" target="_blank" rel="noopener noreferrer">
+                                Terms &amp; Conditions
+                            </a>
+                            and
+                            <a href="/spacio/terms.php?tab=privacy" target="_blank" rel="noopener noreferrer">
+                                Data Privacy Policy
+                            </a>.
+                        </span>
+                    </label>
+                    <?php if (!empty($errorFields['agreed_to_terms'])): ?>
+                    <div class="tc-hint">
+                        <span>⚠</span>
+                        <span><?= $errorFields['agreed_to_terms'] ?></span>
+                    </div>
+                    <?php else: ?>
+                    <div class="tc-hint"></div>
+                    <?php endif; ?>
+                </div>
+                <!-- ─────────────────────────────────────────────────────── -->
+
                 <button type="submit" name="register" class="btn-submit">
                     Create Account
                     <span class="btn-arrow">→</span>
@@ -789,11 +948,18 @@ function fieldClass(array $err, string $key): string {
 
 </div>
 
+<!-- [NEW] footer with T&C links -->
 <footer>
-    <p class="footer-copy">&copy; 2026 <strong>Spacio</strong> &nbsp;·&nbsp; Campus Lab &amp; Classroom Management</p>
+    <p class="footer-copy">&copy; <?= date('Y') ?> <strong>Spacio</strong> &nbsp;&middot;&nbsp; Campus Lab &amp; Classroom Management</p>
+    <div class="footer-links">
+        <a href="/spacio/terms.php">Terms &amp; Conditions</a>
+        <span>|</span>
+        <a href="/spacio/terms.php?tab=privacy">Privacy Policy</a>
+    </div>
 </footer>
 
 <script>
+    // ── Password toggle (unchanged from original) ──
     const pwToggle = document.getElementById('pwToggle');
     const pwInput  = document.getElementById('password');
 
@@ -803,6 +969,7 @@ function fieldClass(array $err, string $key): string {
         pwToggle.textContent = hide ? 'Hide' : 'Show';
     });
 
+    // ── Strength bar (unchanged from original) ──
     const segs   = ['s1','s2','s3','s4'].map(id => document.getElementById(id));
     const colors = ['#f87171','#fb923c','#facc15','#6ee7b7'];
 
@@ -818,6 +985,7 @@ function fieldClass(array $err, string $key): string {
         });
     });
 
+    // ── Role conditional fields (unchanged from original) ──
     const roleSelect  = document.getElementById('role');
     const courseField = document.getElementById('courseField');
     const deptField   = document.getElementById('deptField');
@@ -827,6 +995,16 @@ function fieldClass(array $err, string $key): string {
         courseField.classList.toggle('visible', val === 'student');
         deptField.classList.toggle('visible',   val === 'teacher');
     });
+
+    // [NEW] ── T&C checkbox live feedback ──────────────────────────────────
+    const tcCheckbox = document.getElementById('agreed_to_terms');
+    const tcBox      = document.getElementById('tcBox');
+
+    tcCheckbox.addEventListener('change', () => {
+        tcBox.classList.toggle('is-checked', tcCheckbox.checked);
+        tcBox.classList.remove('has-error');
+    });
+    // ─────────────────────────────────────────────────────────────────────
 </script>
 
 </body>

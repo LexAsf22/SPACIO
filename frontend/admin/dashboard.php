@@ -98,6 +98,10 @@ if ($result['success'] && isset($result['data'])) {
                 <div class="quick-action-icon">📈</div>
                 <span>Reports &amp; Analytics</span>
             </a>
+            <a href="/spacio/frontend/admin/history.php" class="quick-action-btn">
+                <div class="quick-action-icon">🕓</div>
+                <span>Reservation History</span>
+            </a>
         </div>
     </div>
 </div>

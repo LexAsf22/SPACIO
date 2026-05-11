@@ -35,13 +35,18 @@ if (isset($_POST['login'])) {
         // Store JWT + user in session (defined in auth.php)
         storeAuthSession($user, $data['access'], $data['refresh']);
 
+        // Show terms modal on very first login
+        if (empty($data['user']['terms_accepted'])) {
+            $_SESSION['show_terms_modal'] = true;
+        }
+
         // Redirect to role dashboard
         $dashboards = [
-    'student' => '/spacio/frontend/student/dashboard.php',
-    'teacher' => '/spacio/frontend/teacher/dashboard.php',
-    'admin'   => '/spacio/frontend/admin/dashboard.php',
-];
-header("Location: " . ($dashboards[$user['role']] ?? '/spacio/index.php'));
+            'student' => '/spacio/frontend/student/dashboard.php',
+            'teacher' => '/spacio/frontend/teacher/dashboard.php',
+            'admin'   => '/spacio/frontend/admin/dashboard.php',
+        ];
+        header("Location: " . ($dashboards[$user['role']] ?? '/spacio/index.php'));
         exit;
 
     } else {

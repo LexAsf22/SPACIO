@@ -1,8 +1,10 @@
 <?php
 // frontend/includes/header.php
-include_once("../../backend/config/auth.php");
-include_once("../../backend/config/database.php");
-include_once("../../backend/config/helpers.php");
+$base = __DIR__ . '/../../backend/config/';
+
+include_once($base . 'auth.php');
+include_once($base . 'database.php');
+include_once($base . 'helpers.php');
 checkLogin();
 
 $user = $_SESSION['user'];
@@ -14,19 +16,21 @@ $dashboardLink = '/spacio/frontend/' . strtolower($role) . '/dashboard.php';
 
 if ($role === 'student') {
     $nav = [
-        ['href' => '/spacio/frontend/student/dashboard.php',         'icon' => '⊞', 'label' => 'Dashboard'],
-        ['href' => '/spacio/frontend/student/reserve_lab.php',       'icon' => '🔬', 'label' => 'Reserve Lab'],
-        ['href' => '/spacio/frontend/student/reserve_equipment.php', 'icon' => '🖥', 'label' => 'Reserve Equipment'],
-        ['href' => '/spacio/frontend/student/my_reservations.php',   'icon' => '📋', 'label' => 'My Reservations'],
+        ['href' => '/spacio/frontend/student/dashboard.php',            'icon' => '⊞', 'label' => 'Dashboard'],
+        ['href' => '/spacio/frontend/student/reserve_lab.php',          'icon' => '🔬', 'label' => 'Reserve Lab'],
+        ['href' => '/spacio/frontend/student/reserve_equipment.php',    'icon' => '🖥', 'label' => 'Reserve Equipment'],
+        ['href' => '/spacio/frontend/student/my_reservations.php',      'icon' => '📋', 'label' => 'My Reservations'],
+        ['href' => '/spacio/frontend/student/reservation_history.php',  'icon' => '🕓', 'label' => 'History'],
     ];
 }
 
 if ($role === 'teacher') {
     $nav = [
-        ['href' => '/spacio/frontend/teacher/dashboard.php',    'icon' => '⊞', 'label' => 'Dashboard'],
-        ['href' => '/spacio/frontend/teacher/lab_usage.php',    'icon' => '📊', 'label' => 'Lab Usage'],
-        ['href' => '/spacio/frontend/teacher/report_issue.php', 'icon' => '⚠', 'label' => 'Report Issue'],
-        ['href' => '/spacio/frontend/teacher/issue_status.php', 'icon' => '🔍', 'label' => 'Issue Status'],
+        ['href' => '/spacio/frontend/teacher/dashboard.php',             'icon' => '⊞', 'label' => 'Dashboard'],
+        ['href' => '/spacio/frontend/teacher/lab_usage.php',             'icon' => '📊', 'label' => 'Lab Usage'],
+        ['href' => '/spacio/frontend/teacher/report_issue.php',          'icon' => '⚠', 'label' => 'Report Issue'],
+        ['href' => '/spacio/frontend/teacher/issue_status.php',          'icon' => '🔍', 'label' => 'Issue Status'],
+        ['href' => '/spacio/frontend/teacher/reservation_history.php',   'icon' => '🕓', 'label' => 'History'],
     ];
 }
 
@@ -37,6 +41,7 @@ if ($role === 'admin') {
         ['href' => '/spacio/frontend/admin/inventory.php',   'icon' => '📦', 'label' => 'Inventory'],
         ['href' => '/spacio/frontend/admin/maintenance.php', 'icon' => '🔧', 'label' => 'Maintenance'],
         ['href' => '/spacio/frontend/admin/reports.php',     'icon' => '📈', 'label' => 'Reports & Analytics'],
+        ['href' => '/spacio/frontend/admin/history.php',     'icon' => '🕓', 'label' => 'History'],
     ];
 }
 
@@ -124,6 +129,54 @@ $initials  = strtoupper(
         </span>
     </div>
 </header>
+
+<?php if (!empty($_SESSION['show_terms_modal'])): ?>
+<div class="terms-overlay" id="termsOverlay">
+    <div class="terms-modal" id="termsModal">
+
+        <div class="terms-modal-header">
+            <div class="terms-modal-logo">
+                <div class="sidebar-logo-icon" style="width:32px;height:32px;font-size:13px;">Sp</div>
+                <div>
+                    <div style="font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--ink-900);">Welcome to Spacio</div>
+                    <div style="font-size:.7rem;color:var(--ink-400);margin-top:1px;">Please review and accept before continuing</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="terms-modal-body">
+            <div class="terms-modal-notice">
+                <span>📋</span>
+                <div>
+                    <strong>Terms &amp; Conditions and Data Privacy Policy</strong>
+                    By using Spacio, you agree to use the system responsibly, keep your
+                    credentials private, make honest reservations, and handle all lab
+                    equipment with care. Your personal data is collected solely for
+                    academic and administrative purposes and will not be shared with
+                    third parties without your consent.
+                </div>
+            </div>
+            <p class="terms-modal-hint">
+                Read the full
+                <a href="/spacio/frontend/terms.php" target="_blank">Terms &amp; Conditions</a>
+                and
+                <a href="/spacio/frontend/terms.php?tab=privacy" target="_blank">Data Privacy Policy</a>
+                before accepting.
+            </p>
+        </div>
+
+        <div class="terms-modal-footer">
+            <form method="POST" action="/spacio/frontend/accept_terms.php">
+                <button type="submit" class="terms-accept-btn">
+                    ✓ &nbsp;I Accept — Continue to Dashboard
+                </button>
+            </form>
+            <p class="terms-modal-sub">You will not be asked again after accepting.</p>
+        </div>
+
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ── Page Content ────────────────────────────────────────── -->
 <main class="main-content">

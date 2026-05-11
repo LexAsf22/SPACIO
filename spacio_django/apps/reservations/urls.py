@@ -9,6 +9,7 @@ from apps.reservations.views import (
     ApprovalActionView,
     AdminStatsView,
     StudentDashboardView,
+    ReservationHistoryView,
 )
 
 urlpatterns = [
@@ -21,6 +22,9 @@ urlpatterns = [
 
     # GET    /api/v1/reservations/<id>/      ← single reservation
     path("<int:pk>/",       ReservationDetailView.as_view(), name="reservation-detail"),
+
+    # GET    /api/v1/reservations/history/   ← full history (admin) or by user_id
+    path("history/",        ReservationHistoryView.as_view(), name="reservation-history"),
 ]
 
 # These are mounted at /api/v1/ in root urls.py — admin routes use a separate prefix
