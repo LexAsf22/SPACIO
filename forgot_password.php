@@ -1,5 +1,8 @@
 <?php
-// login.php (root)
+// forgot_password.php
+// Place this at: /spacio/forgot_password.php  (same level as login.php)
+
+session_start();
 require_once "backend/config/database.php";
 require_once "backend/config/helpers.php";
 require_once "backend/config/auth.php";
@@ -7,52 +10,28 @@ require_once "backend/config/auth.php";
 // Redirect already-logged-in users
 redirectIfLoggedIn();
 
-$error = null;
+$error   = null;
+$success = null;
 
-if (isset($_POST['login'])) {
-    $email    = trim($_POST['email']    ?? '');
-    $password =      $_POST['password'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['forgot'])) {
+    $email = trim($_POST['email'] ?? '');
 
-    // ── Call Django auth API ──
-    $result = djangoPost('/api/v1/auth/login/', [
-        'email'    => $email,
-        'password' => $password,
-    ]);
-
-    if ($result['success'] && isset($result['data']['access'])) {
-
-        $data = $result['data'];
-
-        // Build user array from Django response
-        $user = [
-            'id'    => $data['user']['id'],
-            'name'  => $data['user']['name'],
-            'email' => $data['user']['email'],
-            'role'  => $data['user']['role'],
-            'campus' => $data['user']['campus'] ?? '',
-        ];
-
-        // Store JWT + user in session (defined in auth.php)
-        storeAuthSession($user, $data['access'], $data['refresh']);
-
-        // Show terms modal on very first login
-        if (empty($data['user']['terms_accepted'])) {
-            $_SESSION['show_terms_modal'] = true;
-        }
-
-        // Redirect to role dashboard
-        $dashboards = [
-            'student' => '/spacio/frontend/student/dashboard.php',
-            'teacher' => '/spacio/frontend/teacher/dashboard.php',
-            'admin'   => '/spacio/frontend/admin/dashboard.php',
-        ];
-        header("Location: " . ($dashboards[$user['role']] ?? '/spacio/index.php'));
-        exit;
-
+    if (empty($email)) {
+        $error = "Please enter your email address.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address.";
     } else {
-        // Show error from Django response, or a fallback message
-        $raw   = $result['data']['detail'] ?? $result['data']['message'] ?? "Invalid email or password. Please try again.";
-        $error = is_array($raw) ? implode(' ', array_map(fn($v) => is_array($v) ? implode(' ', $v) : $v, $raw)) : $raw;
+        $result = djangoPost('/api/v1/auth/forgot-password/', [
+            'email' => $email,
+        ]);
+
+        if ($result['success']) {
+            $success = "If that email is registered, a password reset link has been sent. Check your inbox.";
+            $_SESSION['awaiting_reset'] = true;
+        } else {
+            error_log("Forgot password Django error: " . json_encode($result));
+            $error = "Something went wrong. Please try again later.";
+        }
     }
 }
 ?>
@@ -61,7 +40,7 @@ if (isset($_POST['login'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spacio — Sign In</title>
+    <title>Spacio — Forgot Password</title>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Literata:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -95,7 +74,6 @@ if (isset($_POST['login'])) {
             overflow-x: hidden;
         }
 
-        /* ══ BACKGROUND ══ */
         .page-bg {
             position: fixed; inset: 0; z-index: 0;
             background:
@@ -113,7 +91,6 @@ if (isset($_POST['login'])) {
             pointer-events: none;
         }
 
-        /* ══ LAYOUT ══ */
         .page-wrap {
             position: relative; z-index: 1;
             flex: 1;
@@ -148,13 +125,8 @@ if (isset($_POST['login'])) {
         }
 
         .back-link:hover { color: rgba(255,255,255,.75); }
-
-        .back-arrow {
-            font-size: 1rem;
-            transition: transform .2s;
-        }
-
         .back-link:hover .back-arrow { transform: translateX(-3px); }
+        .back-arrow { font-size: 1rem; transition: transform .2s; display: inline-block; }
 
         .brand {
             display: flex;
@@ -209,33 +181,46 @@ if (isset($_POST['login'])) {
             margin-bottom: 52px;
         }
 
-        .left-features {
+        .steps-list {
             list-style: none;
             display: flex;
             flex-direction: column;
+            gap: 20px;
+        }
+
+        .steps-list li {
+            display: flex;
+            align-items: flex-start;
             gap: 16px;
         }
 
-        .left-features li {
-            display: flex;
-            align-items: center;
-            gap: 14px;
+        .step-num {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: rgba(196,154,42,.15);
+            border: 1px solid rgba(196,154,42,.3);
+            display: grid;
+            place-items: center;
+            font-family: 'Syne', sans-serif;
+            font-size: .68rem;
+            font-weight: 800;
+            color: var(--gold);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .step-text {
             font-family: 'Syne', sans-serif;
             font-size: .78rem;
             font-weight: 600;
-            letter-spacing: .04em;
-            color: rgba(255,255,255,.45);
+            letter-spacing: .03em;
+            color: rgba(255,255,255,.4);
+            line-height: 1.5;
         }
 
-        .feat-icon {
-            width: 34px; height: 34px;
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: 8px;
-            display: grid;
-            place-items: center;
-            font-size: 15px;
-            flex-shrink: 0;
+        .step-text strong {
+            color: rgba(255,255,255,.7);
+            font-weight: 700;
         }
 
         .left-deco-ring {
@@ -264,8 +249,8 @@ if (isset($_POST['login'])) {
             background: linear-gradient(to bottom, transparent, rgba(255,255,255,.07) 30%, rgba(255,255,255,.07) 70%, transparent);
         }
 
-        /* ══ LOGIN CARD ══ */
-        .login-card {
+        /* ══ CARD ══ */
+        .forgot-card {
             width: 100%;
             max-width: 420px;
             animation: riseIn .65s cubic-bezier(.22,1,.36,1) both;
@@ -283,11 +268,7 @@ if (isset($_POST['login'])) {
             margin-bottom: 20px;
         }
 
-        .eyebrow-dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: var(--gold);
-        }
+        .eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
 
         .eyebrow-text {
             font-family: 'Syne', sans-serif;
@@ -312,11 +293,11 @@ if (isset($_POST['login'])) {
             font-size: .88rem;
             color: rgba(255,255,255,.35);
             font-style: italic;
-            margin-bottom: 40px;
+            margin-bottom: 36px;
             line-height: 1.6;
         }
 
-        /* ══ ERROR ══ */
+        /* ══ ALERTS ══ */
         .error-box {
             display: flex;
             align-items: center;
@@ -333,32 +314,47 @@ if (isset($_POST['login'])) {
         }
 
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%       { transform: translateX(-6px); }
-            40%       { transform: translateX(6px); }
-            60%       { transform: translateX(-4px); }
-            80%       { transform: translateX(4px); }
+            0%,100% { transform: translateX(0); }
+            20%      { transform: translateX(-6px); }
+            40%      { transform: translateX(6px); }
+            60%      { transform: translateX(-4px); }
+            80%      { transform: translateX(4px); }
         }
 
-        /* ══ SESSION EXPIRED NOTICE ══ */
-        .notice-box {
+        .success-box {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(196,154,42,.10);
-            border: 1px solid rgba(196,154,42,.3);
+            align-items: flex-start;
+            gap: 12px;
+            background: rgba(74,146,82,.12);
+            border: 1px solid rgba(116,187,122,.3);
             border-radius: 10px;
-            padding: 13px 16px;
+            padding: 16px 18px;
             margin-bottom: 24px;
-            font-size: .83rem;
-            color: #e2bb5a;
+            animation: riseIn .5s cubic-bezier(.22,1,.36,1) both;
+        }
+
+        .success-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+
+        .success-body {}
+
+        .success-title {
+            font-family: 'Syne', sans-serif;
+            font-size: .82rem;
+            font-weight: 700;
+            color: var(--sprout);
+            margin-bottom: 4px;
+            letter-spacing: .02em;
+        }
+
+        .success-msg {
+            font-size: .82rem;
+            color: rgba(185,222,187,.7);
             font-style: italic;
+            line-height: 1.55;
         }
 
         /* ══ FORM ══ */
-        .form-group {
-            margin-bottom: 20px;
-        }
+        .form-group { margin-bottom: 20px; }
 
         .form-group label {
             display: block;
@@ -371,9 +367,7 @@ if (isset($_POST['login'])) {
             margin-bottom: 8px;
         }
 
-        .input-wrap {
-            position: relative;
-        }
+        .input-wrap { position: relative; }
 
         .input-icon {
             position: absolute;
@@ -384,9 +378,7 @@ if (isset($_POST['login'])) {
             pointer-events: none;
         }
 
-        .form-group input[type="email"],
-        .form-group input[type="password"],
-        .form-group input[type="text"] {
+        .form-group input[type="email"] {
             width: 100%;
             padding: 14px 16px 14px 44px;
             background: rgba(255,255,255,.06);
@@ -399,74 +391,13 @@ if (isset($_POST['login'])) {
             transition: border-color .2s, background .2s, box-shadow .2s;
         }
 
-        .form-group input::placeholder {
-            color: rgba(255,255,255,.2);
-            font-style: italic;
-        }
+        .form-group input::placeholder { color: rgba(255,255,255,.2); font-style: italic; }
 
         .form-group input:focus {
             border-color: rgba(116,187,122,.5);
             background: rgba(255,255,255,.09);
             box-shadow: 0 0 0 4px rgba(116,187,122,.08);
         }
-
-        .pw-toggle {
-            position: absolute;
-            right: 13px; top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-family: 'Syne', sans-serif;
-            font-size: .68rem;
-            font-weight: 700;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,.3);
-            padding: 4px 6px;
-            transition: color .2s;
-        }
-
-        .pw-toggle:hover { color: var(--sprout); }
-
-        .options-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 28px;
-        }
-
-        .remember-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .remember-label input[type="checkbox"] {
-            accent-color: var(--sprout);
-            width: 14px; height: 14px;
-            cursor: pointer;
-        }
-
-        .remember-label span {
-            font-size: .78rem;
-            color: rgba(255,255,255,.35);
-            font-style: italic;
-        }
-
-        .forgot-link {
-            font-family: 'Syne', sans-serif;
-            font-size: .72rem;
-            font-weight: 600;
-            letter-spacing: .06em;
-            color: rgba(255,255,255,.3);
-            text-decoration: none;
-            transition: color .2s;
-        }
-
-        .forgot-link:hover { color: var(--gold); }
 
         .btn-submit {
             width: 100%;
@@ -488,6 +419,7 @@ if (isset($_POST['login'])) {
             gap: 8px;
             position: relative;
             overflow: hidden;
+            margin-bottom: 24px;
         }
 
         .btn-submit::after {
@@ -503,28 +435,17 @@ if (isset($_POST['login'])) {
         }
 
         .btn-submit:active { transform: translateY(0); }
-
         .btn-arrow { transition: transform .2s; font-size: 1rem; }
         .btn-submit:hover .btn-arrow { transform: translateX(4px); }
 
-        .divider {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin: 28px 0;
-        }
-
-        .divider hr { flex: 1; border: none; border-top: 1px solid rgba(255,255,255,.07); }
-        .divider span { font-size: .68rem; color: rgba(255,255,255,.2); letter-spacing: .1em; text-transform: uppercase; font-family: 'Syne', sans-serif; }
-
-        .signup-row {
+        .back-to-login {
             text-align: center;
             font-size: .82rem;
             color: rgba(255,255,255,.3);
             font-style: italic;
         }
 
-        .signup-row a {
+        .back-to-login a {
             color: var(--sprout);
             text-decoration: none;
             font-style: normal;
@@ -535,7 +456,7 @@ if (isset($_POST['login'])) {
             transition: color .2s;
         }
 
-        .signup-row a:hover { color: var(--mist); }
+        .back-to-login a:hover { color: var(--mist); }
 
         footer {
             position: relative; z-index: 1;
@@ -549,19 +470,9 @@ if (isset($_POST['login'])) {
             gap: 12px;
         }
 
-        .footer-copy {
-            font-size: .7rem;
-            color: rgba(255,255,255,.2);
-            letter-spacing: .06em;
-        }
-
+        .footer-copy { font-size: .7rem; color: rgba(255,255,255,.2); letter-spacing: .06em; }
         .footer-copy strong { color: rgba(185,222,187,.4); font-weight: 500; }
-
-        .footer-right {
-            font-size: .7rem;
-            color: rgba(255,255,255,.15);
-            font-style: italic;
-        }
+        .footer-right { font-size: .7rem; color: rgba(255,255,255,.15); font-style: italic; }
 
         @media (max-width: 860px) {
             .page-wrap { grid-template-columns: 1fr; }
@@ -583,8 +494,8 @@ if (isset($_POST['login'])) {
     <div class="panel-left">
         <div class="left-deco-ring"></div>
 
-        <a class="back-link" href="index.php">
-            <span class="back-arrow">←</span> Back to Spacio
+        <a class="back-link" href="login.php">
+            <span class="back-arrow">←</span> Back to Sign In
         </a>
 
         <div class="brand">
@@ -593,53 +504,42 @@ if (isset($_POST['login'])) {
         </div>
 
         <h2 class="left-headline">
-            Your campus,<br>
-            <span class="accent">all in one</span><br>
-            dashboard.
+            Locked out?<br>
+            <span class="accent">We'll get you</span><br>
+            back in.
         </h2>
 
         <p class="left-sub">
-            Sign in to access reservations, lab management, inventory, and reporting — tailored to your role.
+            Enter your campus email and we'll send you a secure link to reset your password.
         </p>
 
-        <ul class="left-features">
+        <ul class="steps-list">
             <li>
-                <div class="feat-icon">🗓️</div>
-                Lab &amp; room reservations
+                <div class="step-num">1</div>
+                <div class="step-text"><strong>Enter your email</strong> — the one you used to register on Spacio.</div>
             </li>
             <li>
-                <div class="feat-icon">📦</div>
-                Inventory &amp; equipment tracking
+                <div class="step-num">2</div>
+                <div class="step-text"><strong>Check your inbox</strong> — a reset link will arrive within a minute.</div>
             </li>
             <li>
-                <div class="feat-icon">🚨</div>
-                Issue reporting &amp; resolution
-            </li>
-            <li>
-                <div class="feat-icon">📊</div>
-                Campus-wide reports
+                <div class="step-num">3</div>
+                <div class="step-text"><strong>Set a new password</strong> — the link is valid for 1 hour.</div>
             </li>
         </ul>
     </div>
 
     <!-- ══ RIGHT PANEL ══ -->
     <div class="panel-right">
-        <div class="login-card">
+        <div class="forgot-card">
 
             <div class="card-eyebrow">
                 <div class="eyebrow-dot"></div>
-                <span class="eyebrow-text">Campus Portal</span>
+                <span class="eyebrow-text">Password Recovery</span>
             </div>
 
-            <h1 class="card-title">Sign in to<br>Spacio</h1>
-            <p class="card-sub">Enter your credentials — we'll route you to the right dashboard automatically.</p>
-
-            <?php if (($_GET['reason'] ?? '') === 'session_expired'): ?>
-            <div class="notice-box">
-                <span>🕐</span>
-                <span>Your session expired. Please sign in again.</span>
-            </div>
-            <?php endif; ?>
+            <h1 class="card-title">Forgot your<br>password?</h1>
+            <p class="card-sub">No worries — enter your email and we'll send you a reset link.</p>
 
             <?php if ($error): ?>
             <div class="error-box">
@@ -648,8 +548,32 @@ if (isset($_POST['login'])) {
             </div>
             <?php endif; ?>
 
-            <form method="POST" novalidate>
+            <?php if ($success): ?>
+            <div class="success-box">
+                <span class="success-icon">✉️</span>
+                <div class="success-body">
+                    <div class="success-title">Reset link sent!</div>
+                    <p class="success-msg"><?php echo htmlspecialchars($success); ?></p>
+                    <p class="success-msg" style="margin-top:8px;">This tab will redirect to login automatically once you reset your password.</p>
+                </div>
+            </div>
+            <script>
+                const poll = setInterval(() => {
+                    fetch('backend/api/check_reset_done.php')
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.done) {
+                                clearInterval(poll);
+                                window.location.href = 'login.php';
+                            }
+                        })
+                        .catch(() => {});
+                }, 3000);
+            </script>
+            <?php endif; ?>
 
+            <?php if (!$success): ?>
+            <form method="POST" novalidate>
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <div class="input-wrap">
@@ -666,43 +590,15 @@ if (isset($_POST['login'])) {
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <div class="input-wrap">
-                        <span class="input-icon">🔒</span>
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            placeholder="Enter your password"
-                            autocomplete="current-password"
-                            required
-                        >
-                        <button type="button" class="pw-toggle" id="pwToggle">Show</button>
-                    </div>
-                </div>
-
-                <div class="options-row">
-                    <label class="remember-label">
-                        <input type="checkbox" name="remember">
-                        <span>Remember me for 30 days</span>
-                    </label>
-                    <a href="forgot_password.php" class="forgot-link">Forgot password?</a>
-                </div>
-
-                <button type="submit" name="login" class="btn-submit">
-                    Sign In
+                <button type="submit" name="forgot" class="btn-submit">
+                    Send Reset Link
                     <span class="btn-arrow">→</span>
                 </button>
-
             </form>
+            <?php endif; ?>
 
-            <div class="divider">
-                <hr><span>New to Spacio?</span><hr>
-            </div>
-
-            <p class="signup-row">
-                Don't have an account? <a href="register.php">Create one</a>
+            <p class="back-to-login">
+                Remembered it? <a href="login.php">Back to Sign In</a>
             </p>
 
         </div>
@@ -712,19 +608,8 @@ if (isset($_POST['login'])) {
 
 <footer>
     <p class="footer-copy">&copy; 2026 <strong>Spacio</strong> &nbsp;·&nbsp; Campus Lab &amp; Classroom Management</p>
-    <p class="footer-right">Role-based access — students, teachers &amp; admins</p>
+    <p class="footer-right">Secure password recovery</p>
 </footer>
-
-<script>
-    const pwToggle = document.getElementById('pwToggle');
-    const pwInput  = document.getElementById('password');
-
-    pwToggle.addEventListener('click', () => {
-        const isHidden = pwInput.type === 'password';
-        pwInput.type   = isHidden ? 'text' : 'password';
-        pwToggle.textContent = isHidden ? 'Hide' : 'Show';
-    });
-</script>
 
 </body>
 </html>

@@ -160,3 +160,30 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "REST API for the Spacio campus lab management system.",
     "VERSION":     "1.0.0",
 }
+
+# ── Email (Mailtrap sandbox) ───────────────────────────────────────────────────
+# Add these lines to the BOTTOM of your spacio_api/settings.py
+# Also add these vars to your .env file (see below)
+
+EMAIL_BACKEND       = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST          = os.getenv("EMAIL_HOST",     "sandbox.smtp.mailtrap.io")
+EMAIL_PORT          = int(os.getenv("EMAIL_PORT", "2525"))
+EMAIL_HOST_USER     = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS       = True
+DEFAULT_FROM_EMAIL  = os.getenv("DEFAULT_FROM_EMAIL", "noreply@spacio.app")
+
+# Frontend base URL used to build the reset link in emails
+FRONTEND_BASE_URL   = os.getenv("FRONTEND_BASE_URL", "http://localhost/spacio")
+
+
+# =============================================================================
+# .env entries to add:
+#
+# EMAIL_HOST=sandbox.smtp.mailtrap.io
+# EMAIL_PORT=2525
+# EMAIL_HOST_USER=ffb9013144cf7c
+# EMAIL_HOST_PASSWORD=542e163c651b92
+# DEFAULT_FROM_EMAIL=noreply@spacio.app
+# FRONTEND_BASE_URL=http://localhost/spacio
+# =============================================================================

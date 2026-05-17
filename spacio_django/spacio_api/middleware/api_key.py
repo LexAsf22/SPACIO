@@ -14,9 +14,13 @@ from django.http     import JsonResponse
 
 # Paths that do NOT require the API key
 _EXEMPT_PATHS = (
-    "/admin/",          # Django admin panel
-    "/api/schema/",     # OpenAPI schema
-    "/api/docs/",       # Swagger UI
+    "/admin/",                          # Django admin panel
+    "/api/schema/",                     # OpenAPI schema
+    "/api/docs/",                       # Swagger UI
+    "/api/v1/auth/login/",              # PHP login page
+    "/api/v1/auth/register/",           # PHP register page
+    "/api/v1/auth/forgot-password/",    # PHP forgot password page
+    "/api/v1/auth/reset-password/",     # PHP reset password page
 )
 
 

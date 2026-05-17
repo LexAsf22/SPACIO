@@ -1,5 +1,5 @@
 # apps/authentication/views.py
-# MODIFIED: RegisterView now logs agreed_to_terms_at timestamp.
+# MODIFIED: Added PasswordResetRequestView and PasswordResetConfirmView
 # Lines marked [NEW] are additions to the original file.
 
 from rest_framework                             import status
@@ -10,7 +10,13 @@ from rest_framework_simplejwt.tokens            import RefreshToken
 from rest_framework_simplejwt.settings          import api_settings
 from rest_framework_simplejwt.exceptions        import TokenError
 
-from django.utils import timezone  # [NEW]
+from django.utils                               import timezone
+from django.core.mail                           import send_mail
+from django.conf                                import settings
+from django.contrib.auth.hashers                import make_password
+
+import secrets                                  # [NEW]
+import bcrypt                                   # [NEW]
 
 from apps.authentication.serializers import (
     LoginSerializer,
@@ -36,11 +42,6 @@ def get_tokens_for_user(user):
 
 # ── POST /api/v1/auth/login/ ─────────────────────────────────────────────────
 class LoginView(APIView):
-    """
-    Accepts email + password.
-    Returns JWT access token, refresh token, and user data.
-    PHP stores the access token in $_SESSION['jwt'].
-    """
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -63,11 +64,6 @@ class LoginView(APIView):
 
 # ── POST /api/v1/auth/register/ ──────────────────────────────────────────────
 class RegisterView(APIView):
-    """
-    Accepts registration fields including agreed_to_terms.
-    Creates the user in the shared database.
-    Returns 201 on success — PHP then redirects to login.
-    """
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -78,19 +74,12 @@ class RegisterView(APIView):
 
         user = serializer.save()
 
-        # [NEW] ── Log the T&C acceptance timestamp ───────────────────────────
-        # Note: agreed_to_terms and agreed_to_terms_at are OPTIONAL columns.
-        # Only run this block if you've added those columns to your `users` table.
-        # See the SQL migration snippet at the bottom of this file.
         try:
             user.agreed_to_terms    = True
             user.agreed_to_terms_at = timezone.now()
             user.save(update_fields=["agreed_to_terms", "agreed_to_terms_at"])
         except Exception:
-            # If the columns don't exist yet, skip silently.
-            # The serializer already validated the checkbox on the PHP side.
             pass
-        # ─────────────────────────────────────────────────────────────────────
 
         return Response({
             "message": "Account created successfully.",
@@ -100,15 +89,9 @@ class RegisterView(APIView):
 
 # ── POST /api/v1/auth/logout/ ────────────────────────────────────────────────
 class LogoutView(APIView):
-    """
-    Blacklists the refresh token so it can't be reused after logout.
-    PHP calls this before destroying its own session.
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # Token blacklisting disabled — not supported on MariaDB 10.4.
-        # Logout is handled by PHP destroying the session.
         return Response(
             {"message": "Logged out successfully."},
             status=status.HTTP_200_OK,
@@ -117,7 +100,6 @@ class LogoutView(APIView):
 
 # ── GET /api/v1/auth/me/ ─────────────────────────────────────────────────────
 class MeView(APIView):
-    """Returns the currently authenticated user's profile."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -127,18 +109,193 @@ class MeView(APIView):
         )
 
 
-# =============================================================================
-# [NEW] SQL MIGRATION — run this manually in your MySQL/MariaDB database
-# (Do NOT use Django's manage.py migrate since SpacioUser has managed=False)
-#
-# Run in MySQL:
-#
-#   ALTER TABLE users
-#       ADD COLUMN agreed_to_terms    TINYINT(1)   NOT NULL DEFAULT 0
-#           AFTER department,
-#       ADD COLUMN agreed_to_terms_at DATETIME     NULL DEFAULT NULL
-#           AFTER agreed_to_terms;
-#
-# After running the SQL, remove the try/except in RegisterView.post above
-# and let it run unconditionally.
-# =============================================================================
+# ── POST /api/v1/auth/forgot-password/ ───────────────────────────────────────
+# [NEW]
+class PasswordResetRequestView(APIView):
+    """
+    Accepts an email address.
+    Generates a secure token, saves it to password_reset_tokens,
+    and sends a reset link to the user's email via Mailtrap.
+    Always returns 200 to avoid leaking whether an email exists.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from apps.authentication.models import SpacioUser
+        from django.db import connection
+
+        email = request.data.get("email", "").strip()
+
+        if not email:
+            return Response(
+                {"message": "Email is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Always return 200 even if email not found (security best practice)
+        try:
+            user = SpacioUser.objects.get(email=email)
+        except SpacioUser.DoesNotExist:
+            return Response(
+                {"message": "If that email exists, a reset link has been sent."},
+                status=status.HTTP_200_OK,
+            )
+
+        # Generate a secure random token
+        token      = secrets.token_hex(32)
+        expires_at = timezone.now() + timezone.timedelta(hours=1)
+
+        # Invalidate any existing unused tokens for this user
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE `password_reset_tokens` SET `used` = 1 WHERE `user_id` = %s AND `used` = 0",
+                [user.id],
+            )
+
+        # Insert new token
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO `password_reset_tokens` (`user_id`, `token`, `expires_at`, `used`)
+                VALUES (%s, %s, %s, 0)
+                """,
+                [user.id, token, expires_at],
+            )
+
+        # Build reset link
+        base_url   = getattr(settings, "FRONTEND_BASE_URL", "http://localhost/spacio")
+        reset_link = f"{base_url}/reset_password.php?token={token}"
+
+        # Send email via Mailtrap
+        try:
+            send_mail(
+                subject    = "Reset your Spacio password",
+                message    = (
+                    f"Hi {user.name},\n\n"
+                    f"You requested a password reset for your Spacio account.\n\n"
+                    f"Click the link below to reset your password (valid for 1 hour):\n"
+                    f"{reset_link}\n\n"
+                    f"If you did not request this, you can safely ignore this email.\n\n"
+                    f"— The Spacio Team"
+                ),
+                from_email = settings.DEFAULT_FROM_EMAIL,
+                recipient_list = [user.email],
+                fail_silently  = False,
+            )
+        except Exception as e:
+            # Log but don't expose error to client
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send reset email: {e}")
+
+        return Response(
+            {"message": "If that email exists, a reset link has been sent."},
+            status=status.HTTP_200_OK,
+        )
+
+
+# ── POST /api/v1/auth/reset-password/ ────────────────────────────────────────
+# [NEW]
+class PasswordResetConfirmView(APIView):
+    """
+    Accepts token + new_password.
+    Validates the token, hashes the new password using bcrypt ($2b$),
+    updates the users table, and marks the token as used.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from apps.authentication.models import SpacioUser
+        from django.db import connection
+
+        token        = request.data.get("token", "").strip()
+        new_password = request.data.get("new_password", "")
+        confirm      = request.data.get("confirm_password", "")
+
+        if not token or not new_password or not confirm:
+            return Response(
+                {"message": "Token, new password, and confirmation are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if new_password != confirm:
+            return Response(
+                {"message": "Passwords do not match."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {"message": "Password must be at least 8 characters."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Look up the token
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT `user_id`, `expires_at`, `used`
+                FROM `password_reset_tokens`
+                WHERE `token` = %s
+                LIMIT 1
+                """,
+                [token],
+            )
+            row = cursor.fetchone()
+
+        if not row:
+            return Response(
+                {"message": "Invalid or expired reset link."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user_id, expires_at, used = row
+
+        if used:
+            return Response(
+                {"message": "This reset link has already been used."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # expires_at is stored as UTC in DB, comes back naive — attach UTC directly
+        now = timezone.now()
+        if timezone.is_naive(expires_at):
+            import pytz
+            expires_at = expires_at.replace(tzinfo=pytz.UTC)
+
+        if now > expires_at:
+            return Response(
+                {"message": "This reset link has expired. Please request a new one."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Hash new password with bcrypt ($2b$) so PHP can verify it
+        hashed = bcrypt.hashpw(
+            new_password.encode("utf-8"),
+            bcrypt.gensalt(),
+        ).decode("utf-8")
+
+        # Update user password
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE `users` SET `password` = %s WHERE `id` = %s",
+                [hashed, user_id],
+            )
+            rows_affected = cursor.rowcount
+
+        if rows_affected == 0:
+            return Response(
+                {"message": "User account not found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Mark ALL tokens for this user as used
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE `password_reset_tokens` SET `used` = 1 WHERE `user_id` = %s",
+                [user_id],
+            )
+
+        return Response(
+            {"message": "Password reset successfully. You can now log in."},
+            status=status.HTTP_200_OK,
+        )

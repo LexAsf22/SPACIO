@@ -67,8 +67,24 @@ class EquipmentListView(APIView):
         """Add new equipment — called by admin inventory.php."""
         serializer = EquipmentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            data = serializer.validated_data
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO equipment (equipment_name, lab_id, quantity, status)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    [
+                        data["equipment_name"],
+                        data["lab_id"],
+                        data.get("quantity", 0),
+                        data.get("status", "Available"),
+                    ]
+                )
+                new_id = cursor.lastrowid
+            equipment = Equipment.objects.get(pk=new_id)
+            return Response(EquipmentSerializer(equipment).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
