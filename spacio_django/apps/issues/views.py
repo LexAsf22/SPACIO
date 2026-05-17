@@ -31,11 +31,26 @@ class IssueListView(APIView):
         """Create a new issue — called by teacher report_issue.php."""
         serializer = IssueCreateSerializer(data=request.data)
         if serializer.is_valid():
-            issue = serializer.save()
-            return Response(
-                IssueSerializer(issue).data,
-                status=status.HTTP_201_CREATED,
-            )
+            d = serializer.validated_data
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO issues (user_id, campus, room, category, description, priority, status, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'Pending', NOW())
+                    """,
+                    [
+                        d["user"].id,
+                        d["campus"],
+                        d["room"],
+                        d["category"],
+                        d.get("description", ""),
+                        d.get("priority", "Low"),
+                    ]
+                )
+                new_id = cursor.lastrowid
+            issue = Issue.objects.select_related("user").get(pk=new_id)
+            return Response(IssueSerializer(issue).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

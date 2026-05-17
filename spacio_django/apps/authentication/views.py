@@ -168,22 +168,33 @@ class PasswordResetRequestView(APIView):
 
         # Send email via Mailtrap
         try:
-            send_mail(
-                subject    = "Reset your Spacio password",
-                message    = (
-                    f"Hi {user.name},\n\n"
-                    f"You requested a password reset for your Spacio account.\n\n"
-                    f"Click the link below to reset your password (valid for 1 hour):\n"
-                    f"{reset_link}\n\n"
-                    f"If you did not request this, you can safely ignore this email.\n\n"
-                    f"— The Spacio Team"
-                ),
-                from_email = settings.DEFAULT_FROM_EMAIL,
-                recipient_list = [user.email],
-                fail_silently  = False,
+            import smtplib
+            from email.mime.text import MIMEText
+
+            msg = MIMEText(
+                f"Hi {user.name},\n\n"
+                f"You requested a password reset for your Spacio account.\n\n"
+                f"Click the link below to reset your password (valid for 1 hour):\n"
+                f"{reset_link}\n\n"
+                f"If you did not request this, you can safely ignore this email.\n\n"
+                f"— The Spacio Team"
             )
+            msg["Subject"] = "Reset your Spacio password"
+            msg["From"]    = settings.DEFAULT_FROM_EMAIL
+            msg["To"]      = user.email
+
+            import ssl
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+
+            with smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT) as server:
+                server.ehlo()
+                server.starttls(context=ctx)
+                server.ehlo()
+                server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+                server.sendmail(settings.DEFAULT_FROM_EMAIL, [user.email], msg.as_string())
         except Exception as e:
-            # Log but don't expose error to client
             import logging
             logging.getLogger(__name__).error(f"Failed to send reset email: {e}")
 

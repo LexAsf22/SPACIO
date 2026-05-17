@@ -26,7 +26,24 @@ class ReservationListView(APIView):
         data = {**request.data, "user_id": user_id}
         serializer = ReservationCreateSerializer(data=data)
         if serializer.is_valid():
-            reservation = serializer.save(user_id=user_id)
+            d = serializer.validated_data
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO reservations (user_id, lab_id, equipment_id, date, time_slot, status, created_at)
+                    VALUES (%s, %s, %s, %s, %s, 'Pending', NOW())
+                    """,
+                    [
+                        user_id,
+                        d.get("lab_id"),
+                        d.get("equipment_id"),
+                        d.get("date"),
+                        d.get("time_slot"),
+                    ]
+                )
+                new_id = cursor.lastrowid
+            reservation = Reservation.objects.select_related("user", "lab", "equipment").get(pk=new_id)
             return Response(
                 ReservationSerializer(reservation).data,
                 status=status.HTTP_201_CREATED,

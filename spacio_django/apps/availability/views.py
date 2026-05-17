@@ -2,7 +2,7 @@
 
 from rest_framework.views    import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from apps.reservations.models import Reservation
 from apps.labs.models          import Laboratory, Equipment
@@ -17,7 +17,7 @@ class LabAvailabilityView(APIView):
     Query params:
       ?lab_id=<int>&date=<YYYY-MM-DD>&time_slot=<string>
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         lab_id    = request.query_params.get("lab_id")
@@ -44,7 +44,7 @@ class EquipmentAvailabilityView(APIView):
     Query params:
       ?equipment_id=<int>&date=<YYYY-MM-DD>&time_slot=<string>
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         equipment_id = request.query_params.get("equipment_id")

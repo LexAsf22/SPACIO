@@ -21,6 +21,8 @@ _EXEMPT_PATHS = (
     "/api/v1/auth/register/",           # PHP register page
     "/api/v1/auth/forgot-password/",    # PHP forgot password page
     "/api/v1/auth/reset-password/",     # PHP reset password page
+    "/api/v1/availability/labs/",       # Browser fetch — no API key
+    "/api/v1/availability/equipment/",  # Browser fetch — no API key
 )
 
 
